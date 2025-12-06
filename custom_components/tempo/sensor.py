@@ -413,12 +413,12 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
             "tomorrow_is_red": tomorrow_color_code == 3,
             
             # Combinaisons pratiques pour automatisations J (dépendent de l'heure actuelle)
-            "today_red_hp": today_color_code == 3 and not is_hc,
-            "today_red_hc": today_color_code == 3 and is_hc,
-            "today_white_hp": today_color_code == 2 and not is_hc,
-            "today_white_hc": today_color_code == 2 and is_hc,
-            "today_blue_hp": today_color_code == 1 and not is_hc,
-            "today_blue_hc": today_color_code == 1 and is_hc,
+            "today_is_red_hp": today_color_code == 3 and not is_hc,
+            "today_is_red_hc": today_color_code == 3 and is_hc,
+            "today_is_white_hp": today_color_code == 2 and not is_hc,
+            "today_is_white_hc": today_color_code == 2 and is_hc,
+            "today_is_blue_hp": today_color_code == 1 and not is_hc,
+            "today_is_blue_hc": today_color_code == 1 and is_hc,
             
             # Saison
             "season": self.coordinator.get_current_season(),
