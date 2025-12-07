@@ -22,6 +22,7 @@ import logging
 from datetime import datetime, timedelta
 import aiohttp
 import async_timeout
+import asyncio
 import ssl
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -74,6 +75,12 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         self._last_period = None
         self._last_api_call = None
         self._data_fetched_today = False
+
+        # Créer le contexte SSL en dehors de la boucle d'événements
+        self._ssl_context = ssl.create_default_context()
+        self._ssl_context.check_hostname = False
+        self._ssl_context.verify_mode = ssl.CERT_NONE
+
         self._schedule_updates()
 
     def get_current_season(self) -> str:
@@ -276,12 +283,8 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         url = f"{API_URL}?season={season}"
         
         try:
-            # Créer un contexte SSL qui ignore la vérification du certificat
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-            
-            connector = aiohttp.TCPConnector(ssl=ssl_context)
+            # Utiliser le contexte SSL pré-créé
+            connector = aiohttp.TCPConnector(ssl=self._ssl_context)
             
             async with async_timeout.timeout(15):
                 async with aiohttp.ClientSession(connector=connector) as session:
