@@ -399,7 +399,6 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
             # Jour J
             "today_date": today,
             "today_color": today_color,
-            "today_color_emoji": today_color_emoji,
             "today_color_en": today_color_en,
             "today_color_code": today_color_code,
             "today_color_emoji":today_color_emoji,
