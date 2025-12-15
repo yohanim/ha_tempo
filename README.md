@@ -6,7 +6,7 @@
 
 Intégration pour afficher les couleurs Tempo dans Home Assistant avec **une seule entité** contenant tous les états.
 
-> **Plugin officiel pour les abonnés EDF Tempo** - Récupère les données en temps réel depuis l'API RTE et permet de créer des automatisations basées sur les périodes tarifaires (Heures Creuses/Heures Pleines) et les couleurs (Bleu/Blanc/Rouge).
+Récupère les données en temps réel depuis de le site opendata de RTE. Ce plugin **ne nécessite pas** de créer un compte "dévelopeur" sur le site RTE pour accéder à l’API de RTE. Il permet de créer des automatisations basées sur les périodes tarifaires (Heures Creuses/Heures Pleines) et les couleurs (Bleu/Blanc/Rouge).
 
 ## 📦 Installation
 
@@ -54,6 +54,7 @@ Exemples : `Rouge HP`, `Blanc HC`, `Bleu HP`
 - `today_color` : "Rouge", "Blanc" ou "Bleu"
 - `today_color_en` : "red", "white" ou "blue"
 - `today_color_code` : 1 (bleu), 2 (blanc), 3 (rouge)
+- `today_color_emoji`: "🔵","⚪","🔴"
 - `today_is_red` / `today_is_white` / `today_is_blue` : true/false
 
 ### Lendemain (J+1)
@@ -62,6 +63,7 @@ Exemples : `Rouge HP`, `Blanc HC`, `Bleu HP`
 - `tomorrow_color` : "Rouge", "Blanc" ou "Bleu"
 - `tomorrow_color_en` : "red", "white" ou "blue"
 - `tomorrow_color_code` : 1, 2 ou 3
+- `tomorrow_color_emoji` : "🔵","⚪","🔴"
 - `tomorrow_is_red` / `tomorrow_is_white` / `tomorrow_is_blue` : true/false
 
 ### Combinaisons pratiques
@@ -144,11 +146,11 @@ automation:
 type: markdown
 content: |
   ## Tempo aujourd'hui
-  Couleur : **{{ state_attr('sensor.edf_tempo', 'today_color') }}**
+  Couleur : **{{ state_attr('sensor.edf_tempo', 'today_color_emoji') }}**
   Période : **{{ state_attr('sensor.edf_tempo', 'current_period') }}**
 
   ## Tempo demain
-  Couleur : **{{ state_attr('sensor.edf_tempo', 'tomorrow_color') }}**
+  Couleur : **{{ state_attr('sensor.edf_tempo', 'tomorrow_color_emoji') }}**
 ```
 
 ### 5. Utiliser les attributs dans les conditions
