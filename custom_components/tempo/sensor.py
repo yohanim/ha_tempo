@@ -189,7 +189,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             self.hass,
             self._trigger_api_refresh,
             hour=7,
-            minute=0,
+            minute=5,
             second=0
         )
         
@@ -198,7 +198,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             self.hass,
             self._trigger_api_retry,
             hour=8,
-            minute=0,
+            minute=5,
             second=0
         )
         
