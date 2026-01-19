@@ -38,7 +38,7 @@ from homeassistant.util import dt as dt_util
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "tempo"
-API_URL = "https://www.services-rte.com/cms/open_data/v1/tempo"
+API_URL = "https://www.services-rte.com/cms/open_data/v1/tempoLight"
 
 COLORS = {
     "BLUE": {"code": 1, "name": "Bleu", "name_en": "blue", "emoji":"🔵"},
@@ -85,15 +85,15 @@ class TempoDataCoordinator(DataUpdateCoordinator):
 
    
 
-    def get_current_season(self) -> str:
-        """Retourne la saison actuelle (ex: 2024-2025)."""
-        now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
-        year = now.year
-        month = now.month
+    # def get_current_season(self) -> str:
+    #     """Retourne la saison actuelle (ex: 2024-2025)."""
+    #     now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
+    #     year = now.year
+    #     month = now.month
         
-        if month >= 9:
-            return f"{year}-{year + 1}"
-        return f"{year - 1}-{year}"
+    #     if month >= 9:
+    #         return f"{year}-{year + 1}"
+    #     return f"{year - 1}-{year}"
 
     def get_tempo_date(self, offset_days: int = 0) -> str:
         """
@@ -281,8 +281,8 @@ class TempoDataCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Récupération des données depuis l'API RTE."""
-        season = self.get_current_season()
-        url = f"{API_URL}?season={season}"
+        # season = self.get_current_season()
+        # url = f"{API_URL}?season={season}"
 
         try:
             # Utiliser le contexte SSL pré-créé
@@ -290,7 +290,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             
             async with async_timeout.timeout(15):
                 async with aiohttp.ClientSession(connector=connector) as session:
-                    async with session.get(url) as response:
+                    async with session.get(API_URL) as response:
                         if response.status != 200:
                             _LOGGER.error(f"Erreur API HTTP {response.status}")
                             # En cas d'erreur, on garde les données du cache
@@ -425,7 +425,7 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
             "today_is_blue_hc": today_color_code == 1 and is_hc,
             
             # Saison
-            "season": self.coordinator.get_current_season(),
+            # "season": self.coordinator.get_current_season(),
             
             # Info système
             "data_source": "cache" if today not in self.coordinator.tempo_data else "api",
