@@ -47,6 +47,13 @@
        │    └─ Notification "Demain Blanc"
        │
 
+09:00 ─┐  🔄 RETRY AUTOMATIQUE (si échec 7h)
+11:00 ─┤  ═══════════════════════════════
+13:00 ─┘  ✅ Nouvelles tentatives API
+       │  • Uniquement si données non récupérées
+       │  • Assure la fiabilité du service
+       │
+
        │  🌅 Heures Pleines (Rouge)
        │  • Économies d'énergie actives
        │  • Chauffage réduit
@@ -129,6 +136,24 @@ tomorrow_is_blue = True ou False
 - `attribute: tomorrow_is_white` → `to: true`
 - `attribute: tomorrow_is_blue` → `to: true`
 
+### 2️⃣bis 9h, 11h, 13h - Retries automatiques
+
+**Déclencheur :** `async_track_time_change(hour=9/11/13)`
+
+**Ce qui se passe :**
+
+```python
+if not _data_fetched_today:
+    # Nouvelle tentative d'appel API RTE
+    Appel API RTE
+    # Mêmes mises à jour qu'à 7h si succès
+```
+
+**Objectif :**
+
+- Assurer la récupération des données J+1 même si l'API RTE est temporairement indisponible
+- Ne fait rien si les données ont déjà été récupérées avec succès
+
 ### 3️⃣ 22h00 - Passage HC
 
 **Déclencheur :** `async_track_time_change(hour=22)`
@@ -149,15 +174,12 @@ today_is_*_hc = True ou False selon couleur
 - `attribute: today_is_blue_hc` → `to: true`
 - `attribute: is_hc` → `to: true`
 
-### 4️⃣ Toutes les 5 minutes - Vérification
-
-**Déclencheur :** `update_interval=timedelta(minutes=5)`
+### 4️⃣ Vérification de cohérence
 
 **Objectif :**
 
-- Détecter tout changement d'heure manqué
-- Assurer la cohérence des états
-- Backup des déclenchements programmés
+- Assurer la cohérence des états au démarrage
+- Les données sont mises en cache pour éviter les pertes
 
 ## 🛡️ Sécurités et fiabilité
 
@@ -168,13 +190,15 @@ today_is_*_hc = True ou False selon couleur
 → Au démarrage: détection automatique is_hc = True
 → États cohérents immédiatement
 
-# Si l'API RTE est indisponible
-→ Retry automatique 1h plus tard
+# Si l'API RTE est indisponible à 7h
+→ Retries automatiques à 9h, 11h et 13h
+→ Cache conservé avec les dernières données valides
 → Les couleurs J restent valides
 
-# Si déclenchement 6h ou 22h manqué
-→ Check toutes les 5 min détecte le changement
-→ Mise à jour forcée des entités
+# Système de cache robuste
+→ Les données valides sont mises en cache
+→ En cas d'erreur API, le cache prend le relais
+→ Le sensor reste disponible même si l'API échoue
 ```
 
 ### Logs de suivi
@@ -182,10 +206,20 @@ today_is_*_hc = True ou False selon couleur
 À chaque événement clé :
 
 ```
-[INFO] Changement de période détecté: HP → HC
-[INFO] Données Tempo mises à jour: J=Rouge (3), J+1=Blanc (2) [Passage HC]
-[INFO] Mises à jour programmées: 6h (passage HP), 7h (API J+1), 22h (passage HC)
+[INFO] Mises à jour programmées: 6h (J HP), 7h (API J+1), 9h/11h/13h (retries), 22h (J HC)
+[INFO] 7h - Récupération API pour couleur J+1
+[INFO] ✓ Données Tempo récupérées: J=Rouge (3), J+1=Blanc (2)
+[INFO] 22h - Passage en heures creuses (HC)
 ```
+
+**Mode debug** (dans configuration.yaml) :
+```yaml
+logger:
+  logs:
+    custom_components.tempo: debug
+```
+
+Affiche les détails complets des appels API pour diagnostiquer les problèmes.
 
 ## 📱 Exemple réel d'utilisation
 

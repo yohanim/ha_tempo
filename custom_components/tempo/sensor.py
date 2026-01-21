@@ -174,7 +174,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
     def _schedule_updates(self):
         """Programme les mises à jour aux heures clés."""
         from homeassistant.helpers.event import async_track_time_change
-        
+
         # À 6h : passage HP + activation des détecteurs J
         async_track_time_change(
             self.hass,
@@ -183,7 +183,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             minute=0,
             second=0
         )
-        
+
         # À 7h : récupération API pour couleur J+1
         async_track_time_change(
             self.hass,
@@ -192,16 +192,17 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             minute=0,
             second=0
         )
-        
-        # À 8h : retry si échec à 7h
-        async_track_time_change(
-            self.hass,
-            self._trigger_api_retry,
-            hour=8,
-            minute=0,
-            second=0
-        )
-        
+
+        # Retries à 9h, 11h, 13h si données non récupérées (comme Homebridge)
+        for retry_hour in [9, 11, 13]:
+            async_track_time_change(
+                self.hass,
+                self._trigger_api_retry,
+                hour=retry_hour,
+                minute=0,
+                second=0
+            )
+
         # À 22h : passage HC
         async_track_time_change(
             self.hass,
@@ -210,8 +211,8 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             minute=0,
             second=0
         )
-        
-        _LOGGER.info("Mises à jour programmées: 6h (J HP), 7h (API J+1), 8h (retry), 22h (J HC)")
+
+        _LOGGER.info("Mises à jour programmées: 6h (J HP), 7h (API J+1), 9h/11h/13h (retries), 22h (J HC)")
 
     async def _trigger_period_change(self, _now=None):
         """Changement de période HP/HC ou de jour."""
@@ -245,68 +246,118 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         await self.async_refresh()
 
     async def _trigger_api_retry(self, _now=None):
-        """Retry à 8h si échec à 7h."""
+        """Retry aux heures programmées si données non récupérées."""
+        now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
+        current_hour = now.hour
+
         if not self._data_fetched_today:
-            _LOGGER.info("8h - Retry récupération API (échec à 7h)")
+            _LOGGER.info(f"{current_hour}h - Retry récupération API (données non récupérées)")
             await self.async_refresh()
+        else:
+            _LOGGER.debug(f"{current_hour}h - Retry ignoré, données déjà récupérées")
 
     def _validate_and_cache_data(self, new_data: dict) -> bool:
         """Valide les nouvelles données et met à jour le cache si valides."""
         if not new_data:
-            _LOGGER.warning("Données vides reçues de l'API")
+            _LOGGER.warning("[Validation] Données vides reçues de l'API (dict vide ou None)")
             return False
-        
+
         today = self.get_tempo_date(0)
         tomorrow = self.get_tempo_date(1)
-        
+
+        _LOGGER.debug(f"[Validation] Date J calculée: {today}, Date J+1: {tomorrow}")
+        _LOGGER.debug(f"[Validation] Nombre total d'entrées reçues: {len(new_data)}")
+
         # Vérifie que les données essentielles sont présentes
         today_color = new_data.get(today)
         tomorrow_color = new_data.get(tomorrow)
-        
-        if not today_color or today_color not in COLORS:
-            _LOGGER.warning(f"Couleur invalide pour J ({today}): {today_color}")
+
+        _LOGGER.debug(f"[Validation] Couleur J ({today}): {today_color}")
+        _LOGGER.debug(f"[Validation] Couleur J+1 ({tomorrow}): {tomorrow_color}")
+
+        if not today_color:
+            _LOGGER.warning(f"[Validation] Date J ({today}) absente des données API")
+            _LOGGER.debug(f"[Validation] Dates disponibles (dernières 10): {sorted(new_data.keys())[-10:]}")
             return False
-        
+
+        if today_color not in COLORS:
+            _LOGGER.warning(f"[Validation] Couleur J invalide: '{today_color}' (attendu: {list(COLORS.keys())})")
+            return False
+
         # J+1 peut ne pas encore être disponible (avant 7h)
         if tomorrow_color and tomorrow_color not in COLORS:
-            _LOGGER.warning(f"Couleur invalide pour J+1 ({tomorrow}): {tomorrow_color}")
-        
+            _LOGGER.warning(f"[Validation] Couleur J+1 invalide: '{tomorrow_color}' (attendu: {list(COLORS.keys())})")
+
         # Mise à jour du cache avec les données valides
+        cached_count = 0
         for date, color in new_data.items():
             if color in COLORS:
                 self._cached_data[date] = color
-        
-        _LOGGER.info(f"Cache mis à jour - J: {today_color}, J+1: {tomorrow_color if tomorrow_color else 'N/A'}")
+                cached_count += 1
+
+        _LOGGER.info(f"[Validation] Cache mis à jour ({cached_count} entrées) - J: {today_color}, J+1: {tomorrow_color or 'N/A'}")
         return True
 
     async def _async_update_data(self):
         """Récupération des données depuis l'API RTE."""
         season = self.get_current_season()
         url = f"{API_URL}?season={season}"
+        now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
+
+        _LOGGER.debug(f"[API] Appel API à {now.strftime('%H:%M:%S')} - URL: {url}")
 
         try:
             # Utiliser le contexte SSL pré-créé
             connector = aiohttp.TCPConnector(ssl=self._ssl_context)
-            
+
             async with async_timeout.timeout(15):
                 async with aiohttp.ClientSession(connector=connector) as session:
                     async with session.get(url) as response:
+                        _LOGGER.debug(f"[API] Status HTTP: {response.status}")
+                        _LOGGER.debug(f"[API] Headers: {dict(response.headers)}")
+
                         if response.status != 200:
-                            _LOGGER.error(f"Erreur API HTTP {response.status}")
-                            # En cas d'erreur, on garde les données du cache
+                            response_text = await response.text()
+                            _LOGGER.error(
+                                f"[API] Erreur HTTP {response.status} - Réponse: {response_text[:500]}"
+                            )
                             return self._cached_data
-                        
-                        data = await response.json()
+
+                        # Lire le contenu brut pour diagnostic
+                        response_text = await response.text()
+                        _LOGGER.debug(f"[API] Réponse brute (500 premiers chars): {response_text[:500]}")
+
+                        try:
+                            import json
+                            data = json.loads(response_text)
+                        except json.JSONDecodeError as json_err:
+                            _LOGGER.error(f"[API] Erreur parsing JSON: {json_err}")
+                            _LOGGER.error(f"[API] Contenu reçu: {response_text[:1000]}")
+                            return self._cached_data
+
+                        # Log de la structure de la réponse
+                        _LOGGER.debug(f"[API] Clés dans la réponse: {list(data.keys())}")
+
                         new_data = data.get("values", {})
-                        
+
+                        # Diagnostic détaillé si données vides
+                        if not new_data:
+                            _LOGGER.warning(f"[API] Clé 'values' vide ou absente")
+                            _LOGGER.warning(f"[API] Structure complète: {data}")
+                        else:
+                            _LOGGER.debug(f"[API] Nombre d'entrées dans 'values': {len(new_data)}")
+                            # Afficher les 5 dernières dates pour vérifier
+                            sorted_dates = sorted(new_data.keys())[-5:]
+                            _LOGGER.debug(f"[API] 5 dernières dates: {dict((d, new_data[d]) for d in sorted_dates)}")
+
                         # Valide et met en cache les données
                         if self._validate_and_cache_data(new_data):
                             self.tempo_data = new_data
                             self._data_fetched_today = True
-                            
+
                             today = self.get_tempo_date(0)
                             tomorrow = self.get_tempo_date(1)
-                            
+
                             _LOGGER.info(
                                 "✓ Données Tempo récupérées: J=%s (%s), J+1=%s (%s)",
                                 self.get_color_name(today),
@@ -315,20 +366,19 @@ class TempoDataCoordinator(DataUpdateCoordinator):
                                 self.get_color_code(tomorrow)
                             )
                         else:
-                            _LOGGER.warning("Données invalides, conservation du cache")
-                            # On garde les données du cache
+                            _LOGGER.warning("[API] Données invalides, conservation du cache")
                             return self._cached_data
-                        
+
                         return self.tempo_data
-                        
+
         except asyncio.TimeoutError:
-            _LOGGER.error("Timeout lors de la récupération des données API")
+            _LOGGER.error("[API] Timeout (15s) lors de la récupération des données")
             return self._cached_data
         except aiohttp.ClientError as err:
-            _LOGGER.error(f"Erreur de connexion API: {err}")
+            _LOGGER.error(f"[API] Erreur de connexion: {err}")
             return self._cached_data
         except Exception as err:
-            _LOGGER.error(f"Erreur inattendue: {err}", exc_info=True)
+            _LOGGER.error(f"[API] Erreur inattendue: {err}", exc_info=True)
             return self._cached_data
 
 
