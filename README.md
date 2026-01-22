@@ -4,33 +4,19 @@
 [![GitHub release](https://img.shields.io/github/release/chrisbansart/ha_tempo.svg)](https://github.com/chrisbansart/ha_tempo/releases)
 [![License](https://img.shields.io/github/license/chrisbansart/ha_tempo.svg)](LICENSE)
 
+[![Ouvrir votre instance Home Assistant et ajouter ce dépôt dans HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=chrisbansart&repository=ha_tempo&category=integration)
+
+[![Ouvrir votre instance Home Assistant et configurer l'intégration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=tempo)
+
 Intégration pour afficher les couleurs Tempo dans Home Assistant avec **une seule entité** contenant tous les états.
 
 Récupère les données en temps réel depuis de le site opendata de RTE. Ce plugin **ne nécessite pas** de créer un compte "dévelopeur" sur le site RTE pour accéder à l’API de RTE. Il permet de créer des automatisations basées sur les périodes tarifaires (Heures Creuses/Heures Pleines) et les couleurs (Bleu/Blanc/Rouge).
 
 ## 📦 Installation
 
-### Option 1 : Installation manuelle
+Utilisez les boutons bleus ci-dessus pour installer via HACS puis configurer l'intégration.
 
-1. Créez le dossier `custom_components/tempo/` dans votre configuration Home Assistant
-2. Copiez-y tous les fichiers `.py` et `manifest.json` de ce repository
-3. Redémarrez Home Assistant
-
-### Option 2 : Via HACS (recommandé)
-
-1. Ouvrez HACS dans Home Assistant
-2. Cliquez sur les 3 points en haut à droite puis "Custom repositories"
-3. Ajoutez `https://github.com/chrisbansart/ha_tempo` avec la catégorie "Integration"
-4. Recherchez "EDF Tempo" dans HACS
-5. Cliquez sur "Download"
-6. Redémarrez Home Assistant
-
-## ⚙️ Configuration
-
-1. Allez dans **Paramètres** → **Appareils et services**
-2. Cliquez sur **+ Ajouter une intégration**
-3. Recherchez "EDF Tempo"
-4. Validez (aucune configuration nécessaire)
+**Installation manuelle** : Copiez le contenu du dossier `custom_components/tempo/` dans votre configuration Home Assistant, puis redémarrez.
 
 ## 🎯 L'entité unique
 
