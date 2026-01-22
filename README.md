@@ -167,13 +167,14 @@ L'intégration se met à jour **automatiquement** aux moments clés :
   - Les attributs `today_is_*_hc` deviennent inactifs
   - La nouvelle couleur du jour est appliquée
 
-- **7h00** : 📡 Récupération API de la couleur J+1
+- **7h05** : 📡 Récupération API de la couleur J+1
 
   - Appel à l'API RTE pour obtenir la couleur du lendemain
   - Mise à jour des attributs `tomorrow_*`
+  - Décalé de 5 minutes pour éviter la congestion de l'API
 
-- **9h, 11h, 13h** : 🔄 Retries automatiques
-  - Si la récupération de 7h a échoué, nouvelles tentatives
+- **9h05, 11h05, 13h05** : 🔄 Retries automatiques
+  - Si la récupération de 7h05 a échoué, nouvelles tentatives
   - Assure la fiabilité même si l'API RTE est temporairement indisponible
 
 - **22h00** : 🌙 Passage en Heures Creuses

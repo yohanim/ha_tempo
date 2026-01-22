@@ -38,7 +38,7 @@ from homeassistant.util import dt as dt_util
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "tempo"
-API_URL = "https://www.services-rte.com/cms/open_data/v1/tempo"
+API_URL = "https://www.services-rte.com/cms/open_data/v1/tempoLight"
 
 COLORS = {
     "BLUE": {"code": 1, "name": "Bleu", "name_en": "blue", "emoji":"🔵"},
@@ -184,22 +184,22 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             second=0
         )
 
-        # À 7h : récupération API pour couleur J+1
+        # À 7h05 : récupération API pour couleur J+1 (décalé de 5min pour éviter la congestion)
         async_track_time_change(
             self.hass,
             self._trigger_api_refresh,
             hour=7,
-            minute=0,
+            minute=5,
             second=0
         )
 
-        # Retries à 9h, 11h, 13h si données non récupérées (comme Homebridge)
+        # Retries à 9h05, 11h05, 13h05 si données non récupérées
         for retry_hour in [9, 11, 13]:
             async_track_time_change(
                 self.hass,
                 self._trigger_api_retry,
                 hour=retry_hour,
-                minute=0,
+                minute=5,
                 second=0
             )
 
@@ -212,7 +212,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             second=0
         )
 
-        _LOGGER.info("Mises à jour programmées: 6h (J HP), 7h (API J+1), 9h/11h/13h (retries), 22h (J HC)")
+        _LOGGER.info("Mises à jour programmées: 6h (J HP), 7h05 (API J+1), 9h05/11h05/13h05 (retries), 22h (J HC)")
 
     async def _trigger_period_change(self, _now=None):
         """Changement de période HP/HC ou de jour."""
@@ -241,7 +241,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             _LOGGER.info("Données J+1 déjà récupérées aujourd'hui, skip")
             return
         
-        _LOGGER.info("7h - Récupération API pour couleur J+1")
+        _LOGGER.info("7h05 - Récupération API pour couleur J+1")
         self._last_api_call = today_date
         await self.async_refresh()
 
@@ -299,9 +299,8 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         return True
 
     async def _async_update_data(self):
-        """Récupération des données depuis l'API RTE."""
-        season = self.get_current_season()
-        url = f"{API_URL}?season={season}"
+        """Récupération des données depuis l'API RTE (tempoLight)."""
+        url = API_URL
         now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
 
         _LOGGER.debug(f"[API] Appel API à {now.strftime('%H:%M:%S')} - URL: {url}")
