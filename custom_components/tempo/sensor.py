@@ -23,7 +23,6 @@ from datetime import datetime, timedelta
 import aiohttp
 import async_timeout
 import asyncio
-import ssl
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -34,6 +33,7 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 from homeassistant.util import dt as dt_util
+from homeassistant.util.ssl import get_default_no_verify_context
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,10 +76,8 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         self._last_api_call = None
         self._data_fetched_today = False
         
-        # Créer le contexte SSL en dehors de la boucle d'événements
-        self._ssl_context = ssl.create_default_context()
-        self._ssl_context.check_hostname = False
-        self._ssl_context.verify_mode = ssl.CERT_NONE
+        # Contexte SSL asynchrone recommandé par Home Assistant
+        self._ssl_context = get_default_no_verify_context()
 
         self._schedule_updates()
 
