@@ -19,7 +19,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 import aiohttp
 import async_timeout
 import asyncio
@@ -30,7 +30,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
-    UpdateFailed,
 )
 from homeassistant.util import dt as dt_util
 from homeassistant.util.ssl import get_default_no_verify_context
@@ -98,13 +97,13 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         Retourne la date Tempo (en tenant compte du décalage 6h).
         offset_days: 0 pour J, 1 pour J+1
         """
-        now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
+        # now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
         
         # Si avant 6h du matin, on considère que c'est encore la veille
-        if now.hour < 6:
-            now = now - timedelta(days=1)
+        # if now.hour < 6:
+        #     now = now - timedelta(days=1)
         
-        target_date = now + timedelta(days=offset_days)
+        target_date = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris")) - timedelta(hours=6) + timedelta(days=offset_days)
         return target_date.strftime("%Y-%m-%d")
 
     def get_color_code(self, date: str) -> int:
@@ -285,6 +284,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         # J+1 peut ne pas encore être disponible (avant 7h)
         if tomorrow_color and tomorrow_color not in COLORS:
             _LOGGER.warning(f"[Validation] Couleur J+1 invalide: '{tomorrow_color}' (attendu: {list(COLORS.keys())})")
+            return False
 
         # Mise à jour du cache avec les données valides
         cached_count = 0
