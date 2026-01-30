@@ -142,6 +142,7 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
 
         # Extra attributes for both sensors
         self._attr_extra_state_attributes = {
+            "day": forecast.date.strftime("%a"),
             "date": forecast.date.isoformat(),
             "probability": forecast.probability,
             "attribution": "Données Tempo : Open DPE (https://open-dpe.fr)",
