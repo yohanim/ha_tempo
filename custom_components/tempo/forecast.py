@@ -56,8 +56,8 @@ async def async_fetch_opendpe_forecast(
             ).date()
             color = entry.get("couleur", "").lower()
             prob = entry.get("probability", None)
-            locDay = await format_date(forecast_date, "EEE", locale=hass.config.language)
-            shortdate = await format_date(forecast_date, "d LLL", locale=hass.config.language)
+            locDay = format_date(forecast_date, "EEE", locale=hass.config.language)
+            shortdate = format_date(forecast_date, "d LLL", locale=hass.config.language)
 
             forecasts.append(
                 ForecastDay(
