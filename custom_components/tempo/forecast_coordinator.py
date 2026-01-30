@@ -50,7 +50,7 @@ class ForecastCoordinator(DataUpdateCoordinator[List[ForecastDay]]):
     async def _async_update_data(self) -> List[ForecastDay]:
         """Open DPE data recovery."""
         try:
-            forecasts = await async_fetch_opendpe_forecast(self.session)
+            forecasts = await async_fetch_opendpe_forecast(self.session, self.hass)
             _LOGGER.debug("Open DPE: %s jours récupérés", len(forecasts))
             return forecasts
 
