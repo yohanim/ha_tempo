@@ -4,7 +4,6 @@ from typing import Optional
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from babel.dates import format_date
 
 from .const import (
     DOMAIN,
@@ -145,8 +144,8 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
         # Extra attributes for both sensors
         lang = self.hass.config.language
         self._attr_extra_state_attributes = {
-            "day_en": forecast.date.strftime("%a"),
-            "day": format_date(forecast.date, "EEE", locale=lang),
+            "day": forecast.day,
+            "short_date": forecast.short_date,
             "date": forecast.date.isoformat(),
             "probability": forecast.probability,
             "attribution": "Données Tempo : Open DPE (https://open-dpe.fr)",

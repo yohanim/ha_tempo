@@ -5,6 +5,9 @@ import logging
 from dataclasses import dataclass
 from typing import List, Optional
 
+from homeassistant.core import HomeAssistant
+from babel.dates import format_date
+
 import aiohttp
 
 OPEN_DPE_URL = "https://open-dpe.fr/assets/tempo_days_lite.json"
@@ -18,6 +21,8 @@ class ForecastDay:
     """Tempo forecast for a given day."""
 
     date: datetime.date
+    short_date: str                # minimized localized date
+    day: str                       # minimized localized day of week
     color: str                     # "bleu", "blanc", "rouge" (normalized to lowercase)
     probability: Optional[float]   # 0.67 for example (for 67%)
     source: str = "open_dpe"
@@ -26,6 +31,7 @@ class ForecastDay:
 #   Main function (Open-DPE)
 async def async_fetch_opendpe_forecast(
     session: aiohttp.ClientSession,
+    hass: HomeAssistant,
 ) -> List[ForecastDay]:
     """Fetch Tempo forecasts from the Open DPE JSON."""
 
@@ -50,10 +56,14 @@ async def async_fetch_opendpe_forecast(
             ).date()
             color = entry.get("couleur", "").lower()
             prob = entry.get("probability", None)
+            locDay = await format_date(forecast_date, "EEE", locale=hass.config.language)
+            shortdate = await format_date(forecast_date, "d LLL", locale=hass.config.language)
 
             forecasts.append(
                 ForecastDay(
                     date=forecast_date,
+                    short_date=shortdate,
+                    day=locDay,
                     color=color,
                     probability=prob,
                     source="open_dpe",
