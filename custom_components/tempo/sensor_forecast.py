@@ -17,6 +17,7 @@ from .const import (
     SENSOR_COLOR_WHITE_NAME,
     SENSOR_COLOR_RED_NAME,
     SENSOR_COLOR_UNKNOWN_NAME,
+    DAYS_FR,
 )
 
 from .forecast_coordinator import ForecastCoordinator
@@ -142,7 +143,8 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
 
         # Extra attributes for both sensors
         self._attr_extra_state_attributes = {
-            "day": forecast.date.strftime("%a"),
+            "day_en": forecast.date.strftime("%a"),
+            "day": DAYS_FR[forecast.date.weekday()],
             "date": forecast.date.isoformat(),
             "probability": forecast.probability,
             "attribution": "Données Tempo : Open DPE (https://open-dpe.fr)",
