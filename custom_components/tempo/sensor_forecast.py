@@ -143,7 +143,7 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
             self._attr_native_value = get_color_name(color)
 
         # Extra attributes for both sensors
-        lang = hass.config.language
+        lang = self.hass.config.language
         self._attr_extra_state_attributes = {
             "day_en": forecast.date.strftime("%a"),
             "day": format_date(forecast.date, "EEE", locale=lang),
