@@ -34,19 +34,19 @@ from homeassistant.helpers.update_coordinator import (
 from homeassistant.util import dt as dt_util
 from homeassistant.util.ssl import get_default_no_verify_context
 
+from .const import (
+    API_URL,
+    COLORS,
+    SENSOR_COLOR_UNKNOWN_EMOJI,
+    HP_HOUR,
+    HC_HOUR
+)
+
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = "tempo"
-API_URL = "https://www.services-rte.com/cms/open_data/v1/tempoLight"
-
-COLORS = {
-    "BLUE": {"code": 1, "name": "Bleu", "name_en": "blue", "emoji":"🔵"},
-    "WHITE": {"code": 2, "name": "Blanc", "name_en": "white","emoji":"⚪"},
-    "RED": {"code": 3, "name": "Rouge", "name_en": "red","emoji":"🔴"},
-}
-
-HP_HOUR = 6
-HC_HOUR = 22
+# Importing coordinator and sensors for forecast data
+from .forecast_coordinator import ForecastCoordinator
+from .sensor_forecast import OpenDPEForecastSensor
 
 
 async def async_setup_entry(
@@ -57,6 +57,23 @@ async def async_setup_entry(
     """Configuration de l'entité depuis une config entry."""
     coordinator = TempoDataCoordinator(hass)
     await coordinator.async_config_entry_first_refresh()
+
+    #   Add forecast sensors from Open DPE
+    forecast_coordinator = ForecastCoordinator(hass)
+    await forecast_coordinator.async_config_entry_first_refresh()
+    
+    NUM_FORECAST_DAYS = 7  # J+1 à J+7
+
+    sensors = []
+    
+    # Skip index 0 (J+1) because RTE provides the official J+1 sensor
+    for index in range(1, NUM_FORECAST_DAYS):
+        # Text version
+        sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, visual=False))
+        # Visual version (emoji)
+        sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, visual=True))
+        
+    async_add_entities(sensors, True)
 
     async_add_entities([TempoSensor(coordinator, entry)])
 
@@ -159,7 +176,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         if color and color in COLORS:
             return COLORS[color]["emoji"]
         
-        return "❓"  # Changez "unknown" par un emoji
+        return SENSOR_COLOR_UNKNOWN_EMOJI  # Changez "unknown" par un emoji
 
     def is_hc_time(self) -> bool:
         """Vérifie si on est en heures creuses ({HC_HOUR}h-{HP_HOUR}h)."""
