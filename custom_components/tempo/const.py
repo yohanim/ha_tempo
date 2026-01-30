@@ -21,3 +21,5 @@ HC_HOUR = 22
 # For forecast
 DEVICE_MANUFACTURER = "RTE"
 DEVICE_MODEL = "Calendrier Tempo"
+
+DAYS_FR = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.']
