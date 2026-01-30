@@ -22,4 +22,4 @@ HC_HOUR = 22
 DEVICE_MANUFACTURER = "RTE"
 DEVICE_MODEL = "Calendrier Tempo"
 
-DAYS_FR = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.']
+DAYS_FR = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.']
