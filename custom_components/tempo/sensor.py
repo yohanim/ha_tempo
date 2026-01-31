@@ -39,7 +39,8 @@ from .const import (
     COLORS,
     SENSOR_COLOR_UNKNOWN_EMOJI,
     HP_HOUR,
-    HC_HOUR
+    HC_HOUR,
+    DEVICE_NAME,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ async def async_setup_entry(
     forecast_coordinator = ForecastCoordinator(hass)
     await forecast_coordinator.async_config_entry_first_refresh()
     
-    NUM_FORECAST_DAYS = 7  # J+1 à J+7
+    NUM_FORECAST_DAYS = 9  # J+1 à J+9
 
     sensors = []
     
@@ -407,7 +408,7 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
 
         self._attr_unique_id = f"tempo_edf_{entry.entry_id}"
-        self._attr_name = "EDF Tempo"
+        self._attr_name = DEVICE_NAME
         self._attr_icon = "mdi:flash"
         self._attr_has_entity_name = True
         self._last_state = None

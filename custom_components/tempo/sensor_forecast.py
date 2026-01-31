@@ -17,7 +17,7 @@ from .const import (
     SENSOR_COLOR_WHITE_NAME,
     SENSOR_COLOR_RED_NAME,
     SENSOR_COLOR_UNKNOWN_NAME,
-    # DAYS_FR,
+    DEVICE_NAME,
 )
 
 from .forecast_coordinator import ForecastCoordinator
@@ -103,7 +103,7 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
         """Return device info shared by all forecast sensors."""
         return DeviceInfo(
             identifiers={(DOMAIN, "forecast")},
-            name="RTE Tempo Forecast",
+            name=DEVICE_NAME,
             manufacturer=DEVICE_MANUFACTURER,
             model=DEVICE_MODEL,
         )
