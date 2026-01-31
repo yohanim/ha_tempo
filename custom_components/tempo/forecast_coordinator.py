@@ -23,7 +23,7 @@ class ForecastCoordinator(DataUpdateCoordinator[List[ForecastDay]]):
             hass,
             _LOGGER,
             name="Tempo Forecast Coordinator",
-            update_interval=timedelta(hours=6),  # refresh every 6 hours
+            update_interval=None,  # refresh none as provider do it at fixed hours
         )
 
         self.hass = hass
@@ -34,6 +34,13 @@ class ForecastCoordinator(DataUpdateCoordinator[List[ForecastDay]]):
             hass,
             self._scheduled_refresh,
             hour=7,
+            minute=0,
+            second=0,
+        )
+        async_track_time_change(
+            hass,
+            self._scheduled_refresh,
+            hour=15,
             minute=0,
             second=0,
         )
