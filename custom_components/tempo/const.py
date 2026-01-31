@@ -1,5 +1,6 @@
 """Constants for the EDF Tempo integration."""
 DOMAIN = "tempo"
+DEVICE_NAME = "EDF Tempo KGO"
 API_URL = "https://www.services-rte.com/cms/open_data/v1/tempoLight"
 COLORS = {
     "BLUE": {"code": 1, "name": "Bleu", "name_en": "blue", "emoji":"🔵"},
