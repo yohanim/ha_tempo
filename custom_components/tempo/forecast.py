@@ -27,6 +27,17 @@ class ForecastDay:
     probability: Optional[float]   # 0.67 for example (for 67%)
     source: str = "open_dpe"
 
+#   Add formated day of week and short date to data
+def _format_all_dates(data, lang):
+    # Cette fonction s'exécutera dans un thread séparé
+    for f_date in data:
+        forecast_date = datetime.datetime.strptime(
+                f_date["date"], "%Y-%m-%d"
+            ).date()
+        f_date['forecast_date'] = forecast_date
+        f_date['locDay'] = format_date(forecast_date, "EEE", locale=lang)
+        f_date['shortdate'] = format_date(forecast_date, "d LLL", locale=lang)
+    return data
 
 #   Main function (Open-DPE)
 async def async_fetch_opendpe_forecast(
@@ -49,21 +60,23 @@ async def async_fetch_opendpe_forecast(
 
     forecasts: List[ForecastDay] = []
 
+    data = await hass.async_add_executor_job(_format_all_dates, data, hass.config.language)
+
     for entry in data:
         try:
-            forecast_date = datetime.datetime.strptime(
-                entry["date"], "%Y-%m-%d"
-            ).date()
+            # forecast_date = datetime.datetime.strptime(
+            #     entry["date"], "%Y-%m-%d"
+            # ).date()
             color = entry.get("couleur", "").lower()
             prob = entry.get("probability", None)
-            locDay = await hass.async_add_executor_job(format_date, forecast_date,  "EEE",  hass.config.language)
-            shortdate = await hass.async_add_executor_job(format_date, forecast_date, "d LLL",  hass.config.language)
+            # locDay = await hass.async_add_executor_job(format_date, forecast_date,  "EEE",  hass.config.language)
+            # shortdate = await hass.async_add_executor_job(format_date, forecast_date, "d LLL",  hass.config.language)
 
             forecasts.append(
                 ForecastDay(
-                    date=forecast_date,
-                    short_date=shortdate,
-                    day=locDay,
+                    date=entry["forecast_date"],
+                    short_date=entry["shortdate"],
+                    day=entry["locDay"],
                     color=color,
                     probability=prob,
                     source="open_dpe",

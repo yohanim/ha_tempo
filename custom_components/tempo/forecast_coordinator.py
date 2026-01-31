@@ -29,7 +29,7 @@ class ForecastCoordinator(DataUpdateCoordinator[List[ForecastDay]]):
         self.hass = hass
         self.session = async_get_clientsession(hass)
 
-        # Daily uptade after midnight then every 6 hours (JSON is updated around 06:00)
+        # Daily update after midnight then every 6 hours (JSON is updated around 06:00)
         async_track_time_change(
             hass,
             self._scheduled_refresh,
