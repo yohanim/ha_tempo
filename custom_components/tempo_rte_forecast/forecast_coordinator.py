@@ -95,8 +95,8 @@ def _format_all_dates(self, data, lang) -> dict[str, ForecastSensor]:
                 color       = f_date.get("couleur", "").lower(),
                 probability = f_date.get("probability", None)
                 )
-            forecasts[forecast_date] = sensor_item
-            self._cached_data[forecast_date] = sensor_item
+            forecasts[f_date["date"]] = sensor_item
+            self._cached_data[f_date["date"]] = sensor_item
         except Exception as exc:
             _LOGGER.warning("Open DPE: ligne ignorée (%s) : %s", exc, f_date)
             continue
