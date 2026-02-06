@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional
+from dataclasses import asdict
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -127,7 +128,7 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
         """Attributs détaillés de l'entité."""
         day = get_tempo_date(self.index)
         day_data = self.coordinator.get_data(day)
-        return day_data
+        return asdict(day_data)
 
     # ---------------- Coordinator update handler ----------------------
 
