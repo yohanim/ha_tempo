@@ -113,7 +113,9 @@ async def async_fetch_opendpe_forecast(self):
                 async_call_later(self.hass, datetime.timedelta(minutes=RETRY_DELAY_MINUTES), self.async_request_refresh)
                 return self._cached_data
 
-            _LOGGER.debug("Open-DPE:[API] Réponse brute (500 premiers chars): %s", response.text()[:500])
+            # Lire le contenu brut pour diagnostic
+            response_text = await response.text()
+            _LOGGER.debug("[API] Réponse brute (500 premiers chars): %s", response_text[:500])
             data: List[ForecastDayLight] = await response.json()
 
     except Exception as exc:
