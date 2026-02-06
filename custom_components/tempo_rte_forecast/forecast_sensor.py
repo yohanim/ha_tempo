@@ -110,7 +110,7 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
         """Le sensor est disponible si on a au moins des données en cache."""
         day = get_tempo_date(self.index)
         day_data = self.coordinator.get_data(day)
-        return get_color_code(day_data) != 0
+        return day_data != None
 
     # ---------------- Native Value ----------------------
 
