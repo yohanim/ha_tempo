@@ -58,7 +58,7 @@ class ForecastCoordinator(DataUpdateCoordinator):
     async def _scheduled_refresh(self, now):
         """Update at 07:00 every day."""
         _LOGGER.debug("Open DPE: lancement du refresh programmé à %sh")
-        await self.async_request_refresh()
+        await self.async_refresh()
 
     async def _async_update_data(self):
         """Open DPE data recovery."""
@@ -70,7 +70,7 @@ class ForecastCoordinator(DataUpdateCoordinator):
         except Exception as exc:
             _LOGGER.error("Open DPE: erreur lors de la mise à jour: %s", exc)
             # raise UpdateFailed(f"Erreur mise à jour des prévisions Open DPE: {exc}")
-            async_call_later(self.hass, datetime.timedelta(minutes=RETRY_DELAY_MINUTES), self.async_request_refresh)
+            async_call_later(self.hass, datetime.timedelta(minutes=RETRY_DELAY_MINUTES), self.async_refresh)
         
     def get_data(self, date):
         if date in self.tempo_data:
@@ -110,7 +110,7 @@ async def async_fetch_opendpe_forecast(self):
         async with session.get(OPEN_DPE_URL, timeout=10) as response:
             if response.status != 200:
                 _LOGGER.error("Open-DPE: HTTP %s", response.status)
-                async_call_later(self.hass, datetime.timedelta(minutes=RETRY_DELAY_MINUTES), self.async_request_refresh)
+                async_call_later(self.hass, datetime.timedelta(minutes=RETRY_DELAY_MINUTES), self.async_refresh)
                 return self._cached_data
 
             # Lire le contenu brut pour diagnostic
@@ -121,7 +121,7 @@ async def async_fetch_opendpe_forecast(self):
 
     except Exception as exc:
         _LOGGER.error("Open DPE: erreur lors de la récupération JSON : %s", exc)
-        async_call_later(self.hass, datetime.timedelta(minutes=RETRY_DELAY_MINUTES), self.async_request_refresh)
+        async_call_later(self.hass, datetime.timedelta(minutes=RETRY_DELAY_MINUTES), self.async_refresh)
         return self._cached_data
 
     forecasts = await hass.async_add_executor_job(_format_all_dates, self, data, hass.config.language)
