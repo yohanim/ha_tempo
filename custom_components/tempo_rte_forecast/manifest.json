@@ -1,0 +1,13 @@
+{
+  "domain": "tempo_rte_forecast",
+  "name": "Tempo RTE colors and Open DPE Forecast",
+  "description": "Intégration RTE Tempo et prévision Open DPE pour Home Assistant.",
+  "codeowners": ["@yohanim"],
+  "config_flow": true,
+  "documentation": "https://github.com/yohanim/ha_tempo",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/yohanim/ha_tempo/issues",
+  "requirements": ["babel"],
+  "version": "1.0.0"
+}
