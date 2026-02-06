@@ -108,6 +108,14 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         today_color = new_data.get(today)
         tomorrow_color = new_data.get(tomorrow)
 
+        # Mise à jour du cache avec les données valides
+        cached_count = 0
+        for date, color in new_data.items():
+            if color in COLORS:
+                self._cached_data[date] = color
+                cached_count += 1
+        _LOGGER.info("[Validation] Cache mis à jour (%s entrées) - J: %s, J+1: %s", cached_count, today_color, tomorrow_color or 'N/A')
+
         _LOGGER.debug("[Validation] Couleur J (%s): %s", today, today_color)
         _LOGGER.debug("[Validation] Couleur J+1 (%s): %s", tomorrow, tomorrow_color)
 
@@ -125,14 +133,6 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             _LOGGER.warning("[Validation] Couleur J+1 invalide: '%s' (attendu: %s)", tomorrow_color, list(COLORS.keys()))
             return False
 
-        # Mise à jour du cache avec les données valides
-        cached_count = 0
-        for date, color in new_data.items():
-            if color in COLORS:
-                self._cached_data[date] = color
-                cached_count += 1
-
-        _LOGGER.info("[Validation] Cache mis à jour (%s entrées) - J: %s, J+1: %s", cached_count, today_color, tomorrow_color or 'N/A')
         return True
 
     async def _async_update_data(self):
@@ -222,4 +222,4 @@ class TempoDataCoordinator(DataUpdateCoordinator):
     def get_data(self, date) -> str|None:
         if date in self.tempo_data:
             return self.tempo_data.get(date)
-        return self._cached_data.get(date, "inconnu")
+        return self._cached_data.get(date, None)
