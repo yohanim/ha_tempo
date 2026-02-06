@@ -121,7 +121,7 @@ async def async_fetch_opendpe_forecast(self):
             data = response_json
 
             forecasts = await hass.async_add_executor_job(_format_all_dates, self, data, hass.config.language)
-            _LOGGER.debug("Open DPE: forecasts traité brute (500 premiers chars): %s", json.dumps(forecasts)[:500])
+            _LOGGER.debug("Open DPE: forecasts traité brute (500 premiers chars): %s", forecasts)
 
             return forecasts
 
