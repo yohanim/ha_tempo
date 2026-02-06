@@ -119,11 +119,11 @@ async def async_fetch_opendpe_forecast(self):
             response_json = await response.json()
             data = response_json
 
+            forecasts = await hass.async_add_executor_job(_format_all_dates, self, data, hass.config.language)
+
+            return forecasts
+
     except Exception as exc:
         _LOGGER.error("Open DPE: erreur lors de la récupération JSON : %s", exc)
         async_call_later(self.hass, datetime.timedelta(minutes=RETRY_DELAY_MINUTES), self.async_refresh)
         return self._cached_data
-
-    forecasts = await hass.async_add_executor_job(_format_all_dates, self, data, hass.config.language)
-
-    return forecasts
