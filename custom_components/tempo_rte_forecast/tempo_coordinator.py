@@ -222,6 +222,4 @@ class TempoDataCoordinator(DataUpdateCoordinator):
     def get_data(self, date) -> str|None:
         if date in self.tempo_data:
             return self.tempo_data.get(date)
-        if date in self._cached_data:
-            return self._cached_data.get(date)
-        return "inconnu"
+        return self._cached_data.get(date, "inconnu")

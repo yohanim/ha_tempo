@@ -72,12 +72,10 @@ class ForecastCoordinator(DataUpdateCoordinator):
             # raise UpdateFailed(f"Erreur mise à jour des prévisions Open DPE: {exc}")
             async_call_later(self.hass, datetime.timedelta(minutes=RETRY_DELAY_MINUTES), self.async_request_refresh)
         
-    def get_data(self, date) -> str|None:
+    def get_data(self, date):
         if date in self.tempo_data:
             return self.tempo_data.get(date)
-        if date in self._cached_data:
-            return self._cached_data.get(date)
-        return None
+        return self._cached_data.get(date)
 
 
 #   Add formated day of week and short date to data
@@ -115,6 +113,7 @@ async def async_fetch_opendpe_forecast(self):
                 async_call_later(self.hass, datetime.timedelta(minutes=RETRY_DELAY_MINUTES), self.async_request_refresh)
                 return self._cached_data
 
+            _LOGGER.debug("Open-DPE:[API] Réponse brute (500 premiers chars): %s", response.text()[:500])
             data: List[ForecastDayLight] = await response.json()
 
     except Exception as exc:
