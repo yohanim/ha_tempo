@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import datetime
+import json
 from typing import List
 
 from homeassistant.core import HomeAssistant
@@ -120,6 +121,7 @@ async def async_fetch_opendpe_forecast(self):
             data = response_json
 
             forecasts = await hass.async_add_executor_job(_format_all_dates, self, data, hass.config.language)
+            _LOGGER.debug("Open DPE: forecasts traité brute (500 premiers chars): %s", json.dumps(forecasts)[:500])
 
             return forecasts
 
