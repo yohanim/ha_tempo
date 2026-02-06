@@ -116,7 +116,8 @@ async def async_fetch_opendpe_forecast(self):
             # Lire le contenu brut pour diagnostic
             response_text = await response.text()
             _LOGGER.debug("[API] Réponse brute (500 premiers chars): %s", response_text[:500])
-            data: List[ForecastDayLight] = await response.json()
+            response_json = await response.json()
+            data = response_json
 
     except Exception as exc:
         _LOGGER.error("Open DPE: erreur lors de la récupération JSON : %s", exc)
