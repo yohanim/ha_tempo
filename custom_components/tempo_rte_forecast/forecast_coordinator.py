@@ -73,10 +73,10 @@ class ForecastCoordinator(DataUpdateCoordinator):
             async_call_later(self.hass, datetime.timedelta(minutes=RETRY_DELAY_MINUTES), self.async_request_refresh)
         
     def get_data(self, date) -> str|None:
-        if self.tempo_data[date]:
-            return self.tempo_data[date]
-        if self._cached_data[date]:
-            return self._cached_data[date]
+        if date in self.tempo_data:
+            return self.tempo_data.get(date)
+        if date in self._cached_data:
+            return self._cached_data.get(date)
         return None
 
 

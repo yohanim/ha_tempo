@@ -219,9 +219,9 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             async_call_later(self.hass, timedelta(minutes=RETRY_DELAY_MINUTES), self.async_refresh)
             return self._cached_data
         
-    def get_data(self, date) -> str:
-        if self.tempo_data[date]:
-            return self.tempo_data[date]
-        if self._cached_data[date]:
-            return self._cached_data[date]
+    def get_data(self, date) -> str|None:
+        if date in self.tempo_data:
+            return self.tempo_data.get(date)
+        if date in self._cached_data:
+            return self._cached_data.get(date)
         return "inconnu"
