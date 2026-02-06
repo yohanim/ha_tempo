@@ -61,13 +61,13 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: ForecastCoordinator, index: int, visual: bool):
         super().__init__(coordinator)
 
-        self.index = index
+        self.index = index + 1
         self.visual = visual
 
         # ----- Sensor naming and options -----
         if visual:
-            self._attr_name = f"OpenDPE J{index + 1} (visuel)"
-            self._attr_unique_id = f"{DOMAIN}_forecast_opendpe_j{index + 1}_emoji"
+            self._attr_name = f"OpenDPE J{self.index} (visuel)"
+            self._attr_unique_id = f"{DOMAIN}_forecast_opendpe_j{self.index}_emoji"
             self._attr_options = [
                 COLORS["BLUE"]["emoji"],
                 COLORS["WHITE"]["emoji"],
@@ -77,8 +77,8 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
             self._attr_icon = "mdi:palette"
 
         else:
-            self._attr_name = f"OpenDPE J{index + 1}"
-            self._attr_unique_id = f"{DOMAIN}_forecast_opendpe_j{index + 1}"
+            self._attr_name = f"OpenDPE J{self.index}"
+            self._attr_unique_id = f"{DOMAIN}_forecast_opendpe_j{self.index}"
             self._attr_options = [
                 COLORS["BLUE"]["name"],
                 COLORS["WHITE"]["name"],

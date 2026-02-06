@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 import logging
 from typing import Optional
@@ -10,6 +11,9 @@ from .tempo_coordinator import TempoDataCoordinator
 from .utils import get_tempo_date, get_color_code, get_color_name, get_color_emoji, get_color_name_en
 from .const import (
     DOMAIN,
+    DEVICE_NAME,
+    DEVICE_MANUFACTURER,
+    DEVICE_MODEL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,6 +33,18 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         self._last_state = None
 
         self._attr_native_value: Optional[str] = None
+
+    # ---------------- Device Info ----------------------
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device info shared by all forecast sensors."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, "forecast")},
+            name=DEVICE_NAME,
+            manufacturer=DEVICE_MANUFACTURER,
+            model=DEVICE_MODEL,
+        )
 
     @property
     def available(self) -> bool:
