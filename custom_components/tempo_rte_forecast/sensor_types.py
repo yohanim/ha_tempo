@@ -1,28 +1,25 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import datetime
-from typing import Optional
+from datetime import date
+from typing import Optional, TypedDict
 
 from .const import (
     COLORS,
     )
 
-#   Forecast model
-@dataclass
-class ForecastDayLight:
+#   Forecast model (JSON from Open DPE)
+class ForecastDayLight(TypedDict, total=False):
     """Tempo forecast for a given day."""
-
-    date: datetime.date
+    date: str
     couleur: str                                        # "bleu", "blanc", "rouge" (normalized to lowercase)
     probability: Optional[float]                        # 0.67 for example (for 67%)
-    source: str = "open_dpe"
 
 @dataclass
 class ForecastDay:
     """Tempo forecast for a given day."""
 
-    date: datetime.date
+    date: date
     forecast: int
     consumption_net: int
     stock_blanc: int
@@ -38,7 +35,7 @@ class ForecastDay:
 class ForecastSensor:
     """Tempo forecast for a given day."""
 
-    date: datetime.date
+    date: date
     short_date: str                                     # minimized localized date
     day: str                                            # minimized localized day of week
     color: str                                          # "bleu", "blanc", "rouge" (normalized to lowercase)
@@ -51,7 +48,7 @@ class ForecastSensor:
 class RTEDay:
     """RTE tempo color for a given day."""
 
-    date: datetime.date
+    date: date
     color_emoji: str                                    # color emoji
     color_code: int = 0                                 # color code
     color_name: str = COLORS["inconnu"]["name"]         # color name in French

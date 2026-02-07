@@ -37,13 +37,13 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Configuration de l'entité depuis une config entry."""
-    coordinator = TempoDataCoordinator(hass)
+    coordinator = TempoDataCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
 
     async_add_entities([TempoSensor(coordinator, 0, entry), TempoSensor(coordinator, 1, entry)])
 
     #   Add forecast sensors from Open DPE
-    forecast_coordinator = ForecastCoordinator(hass)
+    forecast_coordinator = ForecastCoordinator(hass, entry)
     await forecast_coordinator.async_config_entry_first_refresh()
     
     NUM_FORECAST_DAYS = 9  # J+1 à J+9
@@ -53,8 +53,8 @@ async def async_setup_entry(
     # Skip index 0 (J+1) because RTE provides the official J+1 sensor
     for index in range(1, NUM_FORECAST_DAYS):
         # Text version
-        sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, visual=False))
+        sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, visual=False, entry=entry))
         # Visual version (emoji)
-        sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, visual=True))
+        sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, visual=True, entry=entry))
         
     async_add_entities(sensors, True)

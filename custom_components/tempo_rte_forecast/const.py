@@ -22,13 +22,18 @@ COLORS["rouge"] = COLORS["RED"]
 # SENSOR_COLOR_RED_NAME = COLORS["RED"]["name"]
 # SENSOR_COLOR_UNKNOWN_NAME = COLORS["inconnu"]["name"]
 
-HP_HOUR = 6
+TEMPO_DAY_CHANGE_HOUR = 6
 HC_HOUR = 22
 
-RETRY_DELAY_MINUTES = 30
+TEMPO_RETRY_DELAY_MINUTES = 30
+FORECAST_RETRY_DELAY_MINUTES = 5
 
 # For forecast
 DEVICE_MANUFACTURER = "RTE"
 DEVICE_MODEL = "Calendrier Tempo"
 
 # DAYS_FR = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.']
+
+CONF_TEMPO_DAY_CHANGE_HOUR = "tempo_day_change_hour"
+CONF_TEMPO_RETRY_DELAY = "tempo_retry_delay_minutes"
+CONF_FORECAST_RETRY_DELAY = "forecast_retry_delay_minutes"

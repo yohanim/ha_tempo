@@ -5,7 +5,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from .tempo_coordinator import TempoDataCoordinator
 from .utils import get_tempo_date, get_color_code, get_color_name, get_color_emoji, get_color_name_en
@@ -14,6 +14,8 @@ from .const import (
     DEVICE_NAME,
     DEVICE_MANUFACTURER,
     DEVICE_MODEL,
+    CONF_TEMPO_DAY_CHANGE_HOUR,
+    TEMPO_DAY_CHANGE_HOUR,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,8 +28,9 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
 
         self.index = index
-        self._attr_name = f"RTE Tempo color J{"" if (index == 0) else "+1"}"
-        self._attr_unique_id = f"{DOMAIN}_J{"" if (index == 0) else "+1"}"
+        self.tempo_day_change_hour = entry.options.get(CONF_TEMPO_DAY_CHANGE_HOUR, TEMPO_DAY_CHANGE_HOUR)
+        self._attr_name = f"RTE Tempo color J{'' if (index == 0) else '+1'}"
+        self._attr_unique_id = f"{DOMAIN}_J{'' if (index == 0) else '+1'}"
         self._attr_icon = "mdi:flash"
         self._attr_has_entity_name = True
         self._last_state = None
@@ -49,14 +52,14 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Le sensor est disponible si on a au moins des données en cache."""
-        day = get_tempo_date(self.index)
+        day = get_tempo_date(self.index, self.tempo_day_change_hour)
         day_data = self.coordinator.get_data(day)
         return day_data != None
 
     @property
     def native_value(self) -> str:
         """Retourne l'état actuel (couleur du jour actuel)."""
-        day = get_tempo_date(self.index)
+        day = get_tempo_date(self.index, self.tempo_day_change_hour)
         day_data = self.coordinator.get_data(day)
         day_color_emoji = get_color_emoji(day_data)
 
@@ -68,17 +71,14 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         return day_color_emoji
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Attributs détaillés de l'entité."""
-        day = get_tempo_date(self.index)
+        day = get_tempo_date(self.index, self.tempo_day_change_hour)
         day_data = self.coordinator.get_data(day)
         
         day_color_code = get_color_code(day_data)
-        
         day_color = get_color_name(day_data)
-        
         day_color_en = get_color_name_en(day_data)
-        
         day_color_emoji = get_color_emoji(day_data)
         
         return {

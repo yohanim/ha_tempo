@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 from dataclasses import asdict
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -13,6 +14,8 @@ from .const import (
     DEVICE_MODEL,
     COLORS,
     DEVICE_NAME,
+    CONF_TEMPO_DAY_CHANGE_HOUR,
+    TEMPO_DAY_CHANGE_HOUR,
 )
 
 from .forecast_coordinator import ForecastCoordinator
@@ -59,11 +62,12 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: ForecastCoordinator, index: int, visual: bool):
+    def __init__(self, coordinator: ForecastCoordinator, index: int, visual: bool, entry: ConfigEntry):
         super().__init__(coordinator)
 
         self.index = index + 1
         self.visual = visual
+        self.tempo_day_change_hour = entry.options.get(CONF_TEMPO_DAY_CHANGE_HOUR, TEMPO_DAY_CHANGE_HOUR)
 
         # ----- Sensor naming and options -----
         if visual:
@@ -109,25 +113,25 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Le sensor est disponible si on a au moins des données en cache."""
-        day = get_tempo_date(self.index)
+        day = get_tempo_date(self.index, self.tempo_day_change_hour)
         day_data = self.coordinator.get_data(day)
         return day_data != None
 
     # ---------------- Native Value ----------------------
 
     @property
-    def native_value(self) -> str:
+    def native_value(self) -> str | None:
         """Retourne l'état actuel (couleur du jour actuel)."""
-        day = get_tempo_date(self.index)
+        day = get_tempo_date(self.index, self.tempo_day_change_hour)
         day_data = self.coordinator.get_data(day)
         if self.visual:
             return get_color_emoji(day_data.color)
         return get_color_name(day_data.color)
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Attributs détaillés de l'entité."""
-        day = get_tempo_date(self.index)
+        day = get_tempo_date(self.index, self.tempo_day_change_hour)
         day_data = self.coordinator.get_data(day)
         return asdict(day_data)
 
