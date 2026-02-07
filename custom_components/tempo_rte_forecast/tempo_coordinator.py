@@ -191,9 +191,12 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         # 1. Tentative avec l'API Light (standard)
         data = await self._fetch_rte_data(RTE_API_URL)
         values = data.get("values", {}) if data else {}
+        if not isinstance(values, dict):
+            values = {}
 
-        # 2. Si données manquantes ou pas de valeur pour aujourd'hui, tentative avec l'API Full
-        if not values or today not in values:
+        # 2. Si pas de valeur pour aujourd'hui, tentative avec l'API Full
+        # (On n'appelle pas l'API Full si c'est juste demain qui manque)
+        if today not in values:
             _LOGGER.info("Données incomplètes (J manquante) sur l'API Light, tentative sur l'API Full")
             today_dt = date.fromisoformat(today)
             season = get_tempo_season(today_dt)
@@ -201,7 +204,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             if data_full:
                 values_full = data_full.get("values", {})
                 # On prend les données Full si elles existent
-                if values_full:
+                if isinstance(values_full, dict) and values_full:
                     values = values_full
 
         # 3. Traitement des données récupérées (Light ou Full)

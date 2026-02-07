@@ -1,0 +1,24 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuration Tempo RTE",
+        "description": "Cette intégration ne nécessite pas de compte RTE. Cliquez sur Valider pour créer les capteurs."
+      }
+    },
+    "abort": {
+      "already_configured": "L'appareil est déjà configuré"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "tempo_day_change_hour": "Heure de changement de jour Tempo (défaut: 6h)",
+          "tempo_retry_delay_minutes": "Délai de réessai API RTE (minutes)",
+          "forecast_retry_delay_minutes": "Délai de réessai API Prévisions (minutes)"
+        }
+      }
+    }
+  }
+}

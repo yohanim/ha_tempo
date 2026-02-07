@@ -1,5 +1,6 @@
+from __future__ import annotations
+from datetime import date, datetime, timedelta
 from homeassistant.util import dt as dt_util
-from datetime import timedelta
 from .const import (
     TEMPO_DAY_CHANGE_HOUR,
     COLORS,
@@ -10,14 +11,19 @@ def get_tempo_date(offset_days: int = 0, tempo_day_change_hour: int = TEMPO_DAY_
     Retourne la date Tempo (en tenant compte du décalage {TEMPO_DAY_CHANGE_HOUR}h).
     offset_days: 0 pour J, 1 pour J+1
     """
-    # now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
-    
-    # Si avant 6h du matin, on considère que c'est encore la veille
-    # if now.hour < 6:
-    #     now = now - timedelta(days=1)
-    
-    target_date = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris")) - timedelta(hours=tempo_day_change_hour) + timedelta(days=offset_days)
+    # Optimisation : récupération directe du fuseau Paris et combinaison des deltas
+    target_date = dt_util.now(dt_util.get_time_zone("Europe/Paris")) + timedelta(days=offset_days, hours=-tempo_day_change_hour)
     return target_date.strftime("%Y-%m-%d")
+
+def get_tempo_season(date_ref: date | datetime | None = None) -> str:
+    """Retourne la saison Tempo actuelle (ex: '2024-2025'). Changement au 1er août."""
+    if date_ref is None:
+        date_ref = dt_util.now()
+        
+    # La saison commence le 1er août. Si mois < 8, on est dans la saison commencée l'année précédente.
+    start_year = date_ref.year - (1 if date_ref.month < 8 else 0)
+    
+    return f"{start_year}-{start_year + 1}"
 
 def get_color_code(data: str | None) -> int:
     """Retourne le code couleur pour une date donnée (avec cache)."""
