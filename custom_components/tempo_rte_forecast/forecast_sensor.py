@@ -7,7 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .utils import get_tempo_date, get_color_code, get_color_name, get_color_emoji
+from .utils import get_tempo_date, get_color_name, get_color_emoji
 from .const import (
     DOMAIN,
     DEVICE_MANUFACTURER,
@@ -43,14 +43,6 @@ from .forecast_coordinator import ForecastCoordinator
 #     return SENSOR_COLOR_UNKNOWN_NAME
 
 
-def get_color_icon(value: str) -> str:
-    if value == "rouge":
-        return "mdi:alert"
-    if value == "blanc":
-        return "mdi:information-outline"
-    if value == "bleu":
-        return "mdi:check-bold"
-    return "mdi:palette"
 
 
 # ---------------- Forecast Sensor ----------------------

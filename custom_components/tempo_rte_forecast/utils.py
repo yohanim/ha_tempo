@@ -1,4 +1,3 @@
-import logging
 from homeassistant.util import dt as dt_util
 from datetime import timedelta
 from .const import (

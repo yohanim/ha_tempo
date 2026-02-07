@@ -2,7 +2,7 @@
 DOMAIN = "tempo_rte_forecast"
 DEVICE_NAME = "Tempo RTE & Open DPE Forecast"
 RTE_API_URL = "https://www.services-rte.com/cms/open_data/v1/tempoLight"
-API_URL = "https://www.services-rte.com/cms/open_data/v1/tempoLight"
+RTE_API_FULL_URL = "https://www.services-rte.com/cms/open_data/v1/tempo?season=2025-2026"
 OPEN_DPE_URL = "https://open-dpe.fr/assets/tempo_days_lite.json"
 COLORS = {
     "BLUE": {"code": 1, "name": "Bleu", "name_en": "blue", "emoji":"🔵"},

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 import aiohttp
 import asyncio
@@ -18,12 +18,13 @@ from homeassistant.util import dt as dt_util
 from .const import (
     TEMPO_DAY_CHANGE_HOUR,
     RTE_API_URL,
+    RTE_API_FULL_URL,
     COLORS,
     TEMPO_RETRY_DELAY_MINUTES,
     CONF_TEMPO_DAY_CHANGE_HOUR,
     CONF_TEMPO_RETRY_DELAY,
 )
-from .utils import get_tempo_date
+from .utils import get_tempo_date, get_tempo_season
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -141,11 +142,9 @@ class TempoDataCoordinator(DataUpdateCoordinator):
 
         return True
 
-    async def _async_update_data(self) -> dict[str, Any]:
-        """Récupération des données depuis l'API RTE (tempoLight)."""
-        url = RTE_API_URL
+    async def _fetch_rte_data(self, url: str) -> dict[str, Any] | None:
+        """Récupère les données JSON depuis une URL RTE donnée."""
         now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
-
         _LOGGER.debug("[API] Appel API à %s - URL: %s", now.strftime('%H:%M:%S'), url)
 
         try:
@@ -161,7 +160,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
                             response.status,
                             response_text[:500]
                         )
-                        return self._cached_data
+                        return None
 
                     # Lire le contenu brut pour diagnostic
                     response_text = await response.text()
@@ -169,58 +168,70 @@ class TempoDataCoordinator(DataUpdateCoordinator):
 
                     try:
                         data = json.loads(response_text)
+                        return data
                     except json.JSONDecodeError as json_err:
                         _LOGGER.error("[API] Erreur parsing JSON: %s", json_err)
                         _LOGGER.error("[API] Contenu reçu: %s", response_text[:1000])
-                        return self._cached_data
-
-                    # Log de la structure de la réponse
-                    _LOGGER.debug("[API] Clés dans la réponse: %s", list(data.keys()))
-
-                    new_data = data.get("values", {})
-
-                    # Diagnostic détaillé si données vides
-                    if not new_data:
-                        _LOGGER.warning("[API] Clé 'values' vide ou absente")
-                        _LOGGER.warning("[API] Structure complète: %s", data)
-                    else:
-                        _LOGGER.debug("[API] Nombre d'entrées dans 'values': %s", len(new_data))
-                        # Afficher les 5 dernières dates pour vérifier
-                        if _LOGGER.isEnabledFor(logging.DEBUG):
-                            sorted_dates = sorted(new_data.keys())[-5:]
-                            _LOGGER.debug("[API] 5 dernières dates: %s", dict((d, new_data[d]) for d in sorted_dates))
-
-                    # Valide et met en cache les données
-                    if self._validate_and_cache_data(new_data):
-                        self.tempo_data = new_data
-                        self._data_fetched_today = True
-
-                        today = get_tempo_date(0, self.tempo_day_change_hour)
-                        tomorrow = get_tempo_date(1, self.tempo_day_change_hour)
-
-                        _LOGGER.info(
-                            "✓ Données Tempo récupérées: J=%s (%s), J+1=%s (%s)", 
-                            today, self.tempo_data[today], 
-                            tomorrow, self.tempo_data[tomorrow]
-                        )
-                    else:
-                        _LOGGER.warning("[API] Données invalides, conservation du cache")
-                        return self._cached_data
-
-                    return self.tempo_data
+                        return None
 
         except asyncio.TimeoutError:
             _LOGGER.error("[API] Timeout (15s) lors de la récupération des données")
-            async_call_later(self.hass, timedelta(minutes=self.retry_delay), self.async_refresh)
-            return self._cached_data
+            return None
         except aiohttp.ClientError as err:
             _LOGGER.error("[API] Erreur de connexion: %s", err)
-            async_call_later(self.hass, timedelta(minutes=self.retry_delay), self.async_refresh)
-            return self._cached_data
+            return None
         except Exception as err:
             _LOGGER.error("[API] Erreur inattendue: %s", err, exc_info=True)
-            async_call_later(self.hass, timedelta(minutes=self.retry_delay), self.async_refresh)
-            return self._cached_data
+            return None
+
+    async def _async_update_data(self) -> dict[str, Any]:
+        """Récupération des données depuis l'API RTE (tempoLight) avec fallback."""
+        today = get_tempo_date(0, self.tempo_day_change_hour)
+        
+        # 1. Tentative avec l'API Light (standard)
+        data = await self._fetch_rte_data(RTE_API_URL)
+        values = data.get("values", {}) if data else {}
+
+        # 2. Si données manquantes ou pas de valeur pour aujourd'hui, tentative avec l'API Full
+        if not values or today not in values:
+            _LOGGER.info("Données incomplètes (J manquante) sur l'API Light, tentative sur l'API Full")
+            today_dt = date.fromisoformat(today)
+            season = get_tempo_season(today_dt)
+            data_full = await self._fetch_rte_data(RTE_API_FULL_URL.format(season=season))
+            if data_full:
+                values_full = data_full.get("values", {})
+                # On prend les données Full si elles existent
+                if values_full:
+                    values = values_full
+
+        # 3. Traitement des données récupérées (Light ou Full)
+        if values:
+            # Log de diagnostic
+            _LOGGER.debug("[API] Nombre d'entrées dans 'values': %s", len(values))
+            if _LOGGER.isEnabledFor(logging.DEBUG):
+                sorted_dates = sorted(values.keys())[-5:]
+                _LOGGER.debug("[API] 5 dernières dates: %s", dict((d, values[d]) for d in sorted_dates))
+
+            # Valide et met en cache les données
+            if self._validate_and_cache_data(values):
+                self.tempo_data = values
+                self._data_fetched_today = True
+
+                tomorrow = get_tempo_date(1, self.tempo_day_change_hour)
+                _LOGGER.info(
+                    "✓ Données Tempo récupérées: J=%s (%s), J+1=%s (%s)", 
+                    today, self.tempo_data[today], 
+                    tomorrow, self.tempo_data.get(tomorrow, 'N/A')
+                )
+                return self.tempo_data
+            else:
+                _LOGGER.warning("[API] Données invalides après validation, conservation du cache")
+        else:
+            _LOGGER.warning("[API] Aucune donnée valide récupérée (ni Light, ni Full)")
+
+        # Si on arrive ici, c'est un échec : on planifie un retry
+        async_call_later(self.hass, timedelta(minutes=self.retry_delay), self.async_refresh)
+        return self._cached_data
         
     def get_data(self, date: str) -> str | None:
         if date in self.tempo_data:
