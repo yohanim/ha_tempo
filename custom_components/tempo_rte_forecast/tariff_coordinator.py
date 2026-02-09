@@ -170,6 +170,7 @@ class TariffCoordinator(DataUpdateCoordinator):
                 self._tariffs = new_tariffs
                 self._last_tariff_update = dt_util.now()
                 _LOGGER.info("Successfully updated tariffs from data.gouv.fr")
+                await self.async_refresh()
 
         except Exception as e:
             _LOGGER.error("Unexpected error during tariff update: %s. Keeping previous prices.", e, exc_info=True)
