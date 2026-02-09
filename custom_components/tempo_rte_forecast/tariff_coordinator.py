@@ -179,10 +179,37 @@ class TariffCoordinator(DataUpdateCoordinator):
         async with async_timeout.timeout(20):
             response = await self.session.get(url)
             response.raise_for_status()
-            content = await response.text(encoding='latin-1')
+            content_bytes = await response.read()
         
+        # Tentative de décodage UTF-8 (avec gestion du BOM), sinon repli sur Latin-1
+        try:
+            content = content_bytes.decode('utf-8')
+            if content.startswith('\ufeff'):
+                content = content[1:]
+        except UnicodeDecodeError:
+            content = content_bytes.decode('latin-1')
+
         csv_file = io.StringIO(content)
         return parser_func(csv_file)
+
+    def _get_csv_reader(self, csv_file: io.StringIO) -> csv.DictReader:
+        """Create a DictReader with cleaned headers."""
+        # Détermination du délimiteur et nettoyage des entêtes
+        pos = csv_file.tell()
+        first_line = csv_file.readline()
+        csv_file.seek(pos)
+        
+        delimiter = ';' if ';' in first_line else ','
+        
+        # Lecture des entêtes pour les nettoyer (strip)
+        reader = csv.reader(csv_file, delimiter=delimiter)
+        try:
+            headers = next(reader)
+        except StopIteration:
+            return csv.DictReader(csv_file, delimiter=delimiter)
+            
+        cleaned_headers = [h.strip() for h in headers]
+        return csv.DictReader(csv_file, fieldnames=cleaned_headers, delimiter=delimiter)
 
     def _parse_date(self, date_str: str) -> date | None:
         if not date_str:
@@ -211,7 +238,7 @@ class TariffCoordinator(DataUpdateCoordinator):
 
     def _parse_base_tariffs(self, csv_file: io.StringIO) -> dict:
         """Parse Base tariff CSV."""
-        reader = csv.DictReader(csv_file, delimiter=';')
+        reader = self._get_csv_reader(csv_file)
         target_date = dt_util.now(dt_util.get_time_zone("Europe/Paris")).date()
 
         for row in reader:
@@ -232,7 +259,7 @@ class TariffCoordinator(DataUpdateCoordinator):
 
     def _parse_hphc_tariffs(self, csv_file: io.StringIO) -> dict:
         """Parse HP/HC tariff CSV."""
-        reader = csv.DictReader(csv_file, delimiter=';')
+        reader = self._get_csv_reader(csv_file)
         target_date = dt_util.now(dt_util.get_time_zone("Europe/Paris")).date()
 
         for row in reader:
@@ -256,7 +283,7 @@ class TariffCoordinator(DataUpdateCoordinator):
 
     def _parse_tempo_tariffs(self, csv_file: io.StringIO) -> dict:
         """Parse Tempo tariff CSV."""
-        reader = csv.DictReader(csv_file, delimiter=';')
+        reader = self._get_csv_reader(csv_file)
         target_date = dt_util.now(dt_util.get_time_zone("Europe/Paris")).date()
 
         for row in reader:
