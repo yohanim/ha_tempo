@@ -14,8 +14,8 @@ from .const import (
     DEVICE_NAME,
     DEVICE_MANUFACTURER,
     DEVICE_MODEL,
-    CONF_TEMPO_DAY_CHANGE_HOUR,
-    TEMPO_DAY_CHANGE_HOUR,
+    CONF_TEMPO_DAY_CHANGE_TIME,
+    TEMPO_DAY_CHANGE_TIME,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
 
         self.index = index
-        self.tempo_day_change_hour = entry.options.get(CONF_TEMPO_DAY_CHANGE_HOUR, TEMPO_DAY_CHANGE_HOUR)
+        self.tempo_day_change_time_str = entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
         self._attr_name = f"RTE Tempo color J{'' if (index == 0) else '+1'}"
         self._attr_unique_id = f"{DOMAIN}_J{'' if (index == 0) else '+1'}"
         self._attr_icon = "mdi:flash"
@@ -52,14 +52,14 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Le sensor est disponible si on a au moins des données en cache."""
-        day = get_tempo_date(self.index, self.tempo_day_change_hour)
+        day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
         return day_data != None
 
     @property
     def native_value(self) -> str:
         """Retourne l'état actuel (couleur du jour actuel)."""
-        day = get_tempo_date(self.index, self.tempo_day_change_hour)
+        day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
         day_color_emoji = get_color_emoji(day_data)
 
@@ -73,7 +73,7 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Attributs détaillés de l'entité."""
-        day = get_tempo_date(self.index, self.tempo_day_change_hour)
+        day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
         
         day_color_code = get_color_code(day_data)

@@ -14,7 +14,7 @@
     "step": {
       "init": {
         "data": {
-          "tempo_day_change_hour": "Heure de changement de jour Tempo (défaut: 6h)",
+          "tempo_day_change_time": "Heure de changement de jour Tempo (défaut: 06:00:00)",
           "tempo_retry_delay_minutes": "Délai de réessai API RTE (minutes)",
           "forecast_retry_delay_minutes": "Délai de réessai API Prévisions (minutes)"
         }

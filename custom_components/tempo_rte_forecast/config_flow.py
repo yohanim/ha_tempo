@@ -21,14 +21,15 @@ from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.core import callback
 from homeassistant.config_entries import OptionsFlow
+from homeassistant.helpers import selector
 
 from .const import (
     DOMAIN,
     DEVICE_NAME,
-    TEMPO_DAY_CHANGE_HOUR,
+    TEMPO_DAY_CHANGE_TIME,
     TEMPO_RETRY_DELAY_MINUTES,
     FORECAST_RETRY_DELAY_MINUTES,
-    CONF_TEMPO_DAY_CHANGE_HOUR,
+    CONF_TEMPO_DAY_CHANGE_TIME,
     CONF_TEMPO_RETRY_DELAY,
     CONF_FORECAST_RETRY_DELAY,
 )
@@ -70,7 +71,10 @@ class OptionsFlowHandler(OptionsFlow):
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
-                vol.Optional(CONF_TEMPO_DAY_CHANGE_HOUR, default=int(self.config_entry.options.get(CONF_TEMPO_DAY_CHANGE_HOUR, TEMPO_DAY_CHANGE_HOUR))): int,
+                vol.Optional(
+                    CONF_TEMPO_DAY_CHANGE_TIME, 
+                    default=self.config_entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
+                ): selector.TimeSelector(),
                 vol.Optional(CONF_TEMPO_RETRY_DELAY, default=int(self.config_entry.options.get(CONF_TEMPO_RETRY_DELAY, TEMPO_RETRY_DELAY_MINUTES))): int,
                 vol.Optional(CONF_FORECAST_RETRY_DELAY, default=int(self.config_entry.options.get(CONF_FORECAST_RETRY_DELAY, FORECAST_RETRY_DELAY_MINUTES))): int,
             }),

@@ -1,18 +1,21 @@
 from __future__ import annotations
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, time
 from homeassistant.util import dt as dt_util
 from .const import (
-    TEMPO_DAY_CHANGE_HOUR,
+    TEMPO_DAY_CHANGE_TIME,
     COLORS,
 )
 
-def get_tempo_date(offset_days: int = 0, tempo_day_change_hour: int = TEMPO_DAY_CHANGE_HOUR) -> str:
+def get_tempo_date(offset_days: int = 0, tempo_day_change_time_str: str = TEMPO_DAY_CHANGE_TIME) -> str:
     """
-    Retourne la date Tempo (en tenant compte du décalage {TEMPO_DAY_CHANGE_HOUR}h).
+    Retourne la date Tempo (en tenant compte de l'heure de changement).
     offset_days: 0 pour J, 1 pour J+1
     """
-    # Optimisation : récupération directe du fuseau Paris et combinaison des deltas
-    target_date = dt_util.now(dt_util.get_time_zone("Europe/Paris")) + timedelta(days=offset_days, hours=-tempo_day_change_hour)
+    now = dt_util.now(dt_util.get_time_zone("Europe/Paris"))
+    change_time = time.fromisoformat(tempo_day_change_time_str)
+    change_time_delta = timedelta(hours=change_time.hour, minutes=change_time.minute, seconds=change_time.second)
+
+    target_date = now - change_time_delta + timedelta(days=offset_days)
     return target_date.strftime("%Y-%m-%d")
 
 def get_tempo_season(date_ref: date | datetime | None = None) -> str:

@@ -14,8 +14,8 @@ from .const import (
     DEVICE_MODEL,
     COLORS,
     DEVICE_NAME,
-    CONF_TEMPO_DAY_CHANGE_HOUR,
-    TEMPO_DAY_CHANGE_HOUR,
+    CONF_TEMPO_DAY_CHANGE_TIME,
+    TEMPO_DAY_CHANGE_TIME,
 )
 
 from .forecast_coordinator import ForecastCoordinator
@@ -59,7 +59,7 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
 
         self.index = index + 1
         self.visual = visual
-        self.tempo_day_change_hour = entry.options.get(CONF_TEMPO_DAY_CHANGE_HOUR, TEMPO_DAY_CHANGE_HOUR)
+        self.tempo_day_change_time_str = entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
 
         # ----- Sensor naming and options -----
         if visual:
@@ -105,7 +105,7 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Le sensor est disponible si on a au moins des données en cache."""
-        day = get_tempo_date(self.index, self.tempo_day_change_hour)
+        day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
         return day_data != None
 
@@ -114,7 +114,7 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self) -> str | None:
         """Retourne l'état actuel (couleur du jour actuel)."""
-        day = get_tempo_date(self.index, self.tempo_day_change_hour)
+        day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
         if self.visual:
             return get_color_emoji(day_data.color)
@@ -123,7 +123,7 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Attributs détaillés de l'entité."""
-        day = get_tempo_date(self.index, self.tempo_day_change_hour)
+        day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
         return asdict(day_data)
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, time
 from typing import Any
 import aiohttp
 import asyncio
@@ -16,12 +16,12 @@ from homeassistant.helpers.event import async_track_time_change, async_call_late
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    TEMPO_DAY_CHANGE_HOUR,
+    TEMPO_DAY_CHANGE_TIME,
     RTE_API_URL,
     RTE_API_FULL_URL,
     COLORS,
     TEMPO_RETRY_DELAY_MINUTES,
-    CONF_TEMPO_DAY_CHANGE_HOUR,
+    CONF_TEMPO_DAY_CHANGE_TIME,
     CONF_TEMPO_RETRY_DELAY,
 )
 from .utils import get_tempo_date, get_tempo_season
@@ -40,7 +40,8 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             update_interval=None,  # Pas de mise à jour automatique, uniquement programmée
         )
         self.entry = entry
-        self.tempo_day_change_hour = entry.options.get(CONF_TEMPO_DAY_CHANGE_HOUR, TEMPO_DAY_CHANGE_HOUR)
+        self.tempo_day_change_time_str = entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
+        self.tempo_day_change_time = time.fromisoformat(self.tempo_day_change_time_str)
         self.retry_delay = entry.options.get(CONF_TEMPO_RETRY_DELAY, TEMPO_RETRY_DELAY_MINUTES)
 
         self.tempo_data = {}
@@ -48,21 +49,21 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         self._last_api_call = None
         self._data_fetched_today = False
         
-        # Utilisation d'une session partagée avec SSL désactivé (spécifique à l'API RTE)
-        self.session = async_get_clientsession(hass, verify_ssl=False)
+        # Utilisation d'une session partagée. La vérification SSL est activée par défaut.
+        self.session = async_get_clientsession(hass)
 
         self._schedule_updates()
 
     def _schedule_updates(self) -> None:
         """Programme les mises à jour aux heures clés."""
 
-        # À {TEMPO_DAY_CHANGE_HOUR}h : Changement de jour Tempo
+        # Au moment du changement de jour Tempo
         async_track_time_change(
             self.hass,
             self._trigger_day_change,
-            hour=self.tempo_day_change_hour,
-            minute=0,
-            second=0
+            hour=self.tempo_day_change_time.hour,
+            minute=self.tempo_day_change_time.minute,
+            second=self.tempo_day_change_time.second
         )
 
         # À 7h05 : récupération API pour couleur J+1 (décalé de 5min pour éviter la congestion)
@@ -74,7 +75,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             second=0
         )
 
-        _LOGGER.info("Mises à jour programmées: %sh (J HP), 7h05 (API J+1)", self.tempo_day_change_hour)
+        _LOGGER.info("Mises à jour programmées: %s (Changement jour Tempo), 7h05 (API J+1)", self.tempo_day_change_time_str)
 
     async def _trigger_api_refresh(self, _now: datetime | None = None) -> None:
         """Récupération API à 7h pour couleur J+1."""
@@ -94,8 +95,8 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         """Changement de période HP/HC ou de jour."""
         now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
         
-        if now.hour == self.tempo_day_change_hour:
-            _LOGGER.info("%sh - Changement de jour Tempo", self.tempo_day_change_hour)
+        if now.hour == self.tempo_day_change_time.hour and now.minute == self.tempo_day_change_time.minute:
+            _LOGGER.info("%s - Changement de jour Tempo", self.tempo_day_change_time_str)
             self._data_fetched_today = False  # Reset pour permettre la récupération à 7h
         
         # Force la mise à jour des entités (sans appel API)
@@ -107,8 +108,8 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             _LOGGER.warning("[Validation] Données vides reçues de l'API (dict vide ou None)")
             return False
 
-        today = get_tempo_date(0, self.tempo_day_change_hour)
-        tomorrow = get_tempo_date(1, self.tempo_day_change_hour)
+        today = get_tempo_date(0, self.tempo_day_change_time_str)
+        tomorrow = get_tempo_date(1, self.tempo_day_change_time_str)
 
         _LOGGER.debug("[Validation] Date J calculée: %s, Date J+1: %s", today, tomorrow)
         _LOGGER.debug("[Validation] Nombre total d'entrées reçues: %s", len(new_data))
@@ -186,7 +187,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Récupération des données depuis l'API RTE (tempoLight) avec fallback."""
-        today = get_tempo_date(0, self.tempo_day_change_hour)
+        today = get_tempo_date(0, self.tempo_day_change_time_str)
         
         # 1. Tentative avec l'API Light (standard)
         data = await self._fetch_rte_data(RTE_API_URL)
@@ -220,7 +221,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
                 self.tempo_data = values
                 self._data_fetched_today = True
 
-                tomorrow = get_tempo_date(1, self.tempo_day_change_hour)
+                tomorrow = get_tempo_date(1, self.tempo_day_change_time_str)
                 _LOGGER.info(
                     "✓ Données Tempo récupérées: J=%s (%s), J+1=%s (%s)", 
                     today, self.tempo_data[today], 

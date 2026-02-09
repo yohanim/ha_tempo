@@ -22,7 +22,7 @@ COLORS["rouge"] = COLORS["RED"]
 # SENSOR_COLOR_RED_NAME = COLORS["RED"]["name"]
 # SENSOR_COLOR_UNKNOWN_NAME = COLORS["inconnu"]["name"]
 
-TEMPO_DAY_CHANGE_HOUR = 6
+TEMPO_DAY_CHANGE_TIME = "06:00:00"
 HC_HOUR = 22
 
 TEMPO_RETRY_DELAY_MINUTES = 30
@@ -34,6 +34,6 @@ DEVICE_MODEL = "Calendrier Tempo"
 
 # DAYS_FR = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.']
 
-CONF_TEMPO_DAY_CHANGE_HOUR = "tempo_day_change_hour"
+CONF_TEMPO_DAY_CHANGE_TIME = "tempo_day_change_time"
 CONF_TEMPO_RETRY_DELAY = "tempo_retry_delay_minutes"
 CONF_FORECAST_RETRY_DELAY = "forecast_retry_delay_minutes"
