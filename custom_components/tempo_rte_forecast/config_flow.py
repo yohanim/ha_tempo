@@ -41,6 +41,8 @@ from .const import (
     DEFAULT_OFFPEAK_RANGES,
     CONF_SUBSCRIBED_POWER,
     DEFAULT_SUBSCRIBED_POWER,
+    CONF_PRICE_UPDATE_INTERVAL,
+    DEFAULT_PRICE_UPDATE_INTERVAL,
 )
 
 
@@ -104,6 +106,17 @@ class OptionsFlowHandler(OptionsFlow):
                     CONF_OFFPEAK_RANGES,
                     default=current_options.get(CONF_OFFPEAK_RANGES, DEFAULT_OFFPEAK_RANGES)
                 ): str,
+                vol.Optional(
+                    CONF_PRICE_UPDATE_INTERVAL,
+                    default=current_options.get(CONF_PRICE_UPDATE_INTERVAL, DEFAULT_PRICE_UPDATE_INTERVAL)
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=1,
+                        max=30,
+                        step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
                 vol.Optional(
                     CONF_TEMPO_DAY_CHANGE_TIME, 
                     default=current_options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)

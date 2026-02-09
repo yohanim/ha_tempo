@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 import async_timeout
 import io
 import csv
@@ -20,9 +20,11 @@ from .const import (
     DEFAULT_OFFPEAK_RANGES,
     CONF_SUBSCRIBED_POWER,
     DEFAULT_SUBSCRIBED_POWER,
-    TARIF_BASE_URL,
-    TARIF_HPHC_URL,
-    TARIF_TEMPO_URL,
+    CONF_PRICE_UPDATE_INTERVAL,
+    DEFAULT_PRICE_UPDATE_INTERVAL,
+    PRICE_BASE_URL,
+    PRICE_HPHC_URL,
+    PRICE_TEMPO_URL,
 )
 from .utils import parse_offpeak_ranges, is_offpeak
 from .tempo_coordinator import TempoDataCoordinator
@@ -42,15 +44,15 @@ FALLBACK_PRICES = {
     },
 }
 
-class TariffCoordinator(DataUpdateCoordinator):
-    """Coordinator for managing electricity tariffs."""
+class PriceCoordinator(DataUpdateCoordinator):
+    """Coordinator for managing electricity prices."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, tempo_coordinator: TempoDataCoordinator):
         """Initialize the coordinator."""
         super().__init__(
             hass,
             _LOGGER,
-            name="Tariff Coordinator",
+            name="Price Coordinator",
             update_interval=None,  # Updates are triggered by time changes
         )
         self.entry = entry
@@ -59,8 +61,9 @@ class TariffCoordinator(DataUpdateCoordinator):
         self._offpeak_ranges = []
         self._contract = "Base"
         self._subscribed_power = DEFAULT_SUBSCRIBED_POWER
-        self._tariffs = FALLBACK_PRICES
-        self._last_tariff_update = None
+        self._price_update_interval = DEFAULT_PRICE_UPDATE_INTERVAL
+        self._prices = FALLBACK_PRICES
+        self._last_price_update = None
         self._scheduled_update_listeners = []
         self._setup_from_options()
 
@@ -74,10 +77,10 @@ class TariffCoordinator(DataUpdateCoordinator):
         update_dt = dummy_dt - timedelta(minutes=5)
         update_time = update_dt.time()
 
-        # Schedule tariff update once a day (5 minutes before day change)
-        async_track_time_change(hass, self._update_tariffs, hour=update_time.hour, minute=update_time.minute, second=update_time.second)
-        # Initial tariff fetch
-        self.hass.async_create_task(self._update_tariffs())
+        # Schedule prices update once a day (5 minutes before day change)
+        async_track_time_change(hass, self._update_prices, hour=update_time.hour, minute=update_time.minute, second=update_time.second)
+        # Initial prices fetch
+        self.hass.async_create_task(self._update_prices())
 
     @callback
     def _setup_from_options(self):
@@ -85,22 +88,24 @@ class TariffCoordinator(DataUpdateCoordinator):
         options = self.entry.options
         self._contract = options.get(CONF_CONTRACT, "Tempo")
         self._subscribed_power = options.get(CONF_SUBSCRIBED_POWER, DEFAULT_SUBSCRIBED_POWER)
+        self._price_update_interval = options.get(CONF_PRICE_UPDATE_INTERVAL, DEFAULT_PRICE_UPDATE_INTERVAL)
         offpeak_ranges_str = options.get(CONF_OFFPEAK_RANGES, DEFAULT_OFFPEAK_RANGES)
         self._offpeak_ranges = parse_offpeak_ranges(offpeak_ranges_str)
         _LOGGER.info(
-            "Tariff coordinator setup: Contract='%s', Power='%s kVA', Off-peak ranges=%s",
+            "Price coordinator setup: Contract='%s', Power='%s kVA', Off-peak ranges=%s, Update interval: %s day(s)",
             self._contract,
             self._subscribed_power,
             offpeak_ranges_str,
+            self._price_update_interval,
         )
         self._schedule_listeners()
 
     async def _handle_options_update(self, hass: HomeAssistant, entry: ConfigEntry):
         """Handle options update."""
-        _LOGGER.info("Configuration options updated, reloading tariff coordinator.")
+        _LOGGER.info("Configuration options updated, reloading price coordinator.")
         self._setup_from_options()
-        # Re-fetch tariffs if power or contract changed
-        await self._update_tariffs()
+        # Re-fetch prices if power or contract changed
+        await self._update_prices()
         await self.async_refresh()
 
     def _schedule_listeners(self):
@@ -120,60 +125,73 @@ class TariffCoordinator(DataUpdateCoordinator):
         # Add Tempo day change time
         trigger_times.add(self.tempo_coordinator.tempo_day_change_time)
 
-        _LOGGER.debug("Scheduling tariff updates at: %s", [t.strftime("%H:%M:%S") for t in trigger_times])
+        _LOGGER.debug("Scheduling prices updates at: %s", [t.strftime("%H:%M:%S") for t in trigger_times])
 
         for t in trigger_times:
             self._scheduled_update_listeners.append(
                 async_track_time_change(self.hass, self.async_refresh, hour=t.hour, minute=t.minute, second=t.second)
             )
 
-    async def _update_tariffs(self, _now: datetime | None = None) -> None:
-        """Fetch and parse tariffs from data.gouv.fr."""
-        _LOGGER.info("Attempting to update tariffs from data.gouv.fr for contract: %s", self._contract)
+    async def _update_prices(self, _now: datetime | None = None) -> None:
+        """Fetch and parse prices from data.gouv.fr."""
+        # Check if update is needed based on interval
+        if self._last_price_update:
+            # Ensure interval is at least 1
+            interval = max(1, self._price_update_interval)
+            days_since_last_update = (dt_util.now() - self._last_price_update).days
+            if days_since_last_update < interval:
+                _LOGGER.debug(
+                    "Price update skipped, only %s day(s) since last update (interval: %s days)",
+                    days_since_last_update,
+                    interval,
+                )
+                return
+
+        _LOGGER.info("Attempting to update prices from data.gouv.fr for contract: %s", self._contract)
         
-        new_tariffs = self._tariffs.copy()
+        new_prices = self._prices.copy()
         has_updated = False
         
         try:
             if self._contract == "Base":
                 try:
-                    base_prices = await self._fetch_and_parse_csv(TARIF_BASE_URL, self._parse_base_tariffs)
+                    base_prices = await self._fetch_and_parse_csv(PRICE_BASE_URL, self._parse_base_prices)
                     if base_prices:
-                        new_tariffs["Base"] = base_prices
+                        new_prices["Base"] = base_prices
                         has_updated = True
                 except Exception as e:
-                    _LOGGER.warning("Failed to update Base tariffs: %s", e)
+                    _LOGGER.warning("Failed to update Base prices: %s", e)
 
             elif self._contract == "Heures Creuses":
                 try:
-                    hphc_prices = await self._fetch_and_parse_csv(TARIF_HPHC_URL, self._parse_hphc_tariffs)
+                    hphc_prices = await self._fetch_and_parse_csv(PRICE_HPHC_URL, self._parse_hphc_prices)
                     if hphc_prices:
-                        new_tariffs["Heures Creuses"] = hphc_prices
+                        new_prices["Heures Creuses"] = hphc_prices
                         has_updated = True
                 except Exception as e:
-                    _LOGGER.warning("Failed to update HP/HC tariffs: %s", e)
+                    _LOGGER.warning("Failed to update HP/HC prices: %s", e)
 
             elif self._contract == "Tempo":
                 try:
-                    tempo_prices = await self._fetch_and_parse_csv(TARIF_TEMPO_URL, self._parse_tempo_tariffs)
+                    tempo_prices = await self._fetch_and_parse_csv(PRICE_TEMPO_URL, self._parse_tempo_prices)
                     if tempo_prices:
-                        if "Tempo" not in new_tariffs:
-                            new_tariffs["Tempo"] = {}
-                        new_tariffs["Tempo"].update(tempo_prices)
+                        if "Tempo" not in new_prices:
+                            new_prices["Tempo"] = {}
+                        new_prices["Tempo"].update(tempo_prices)
                         has_updated = True
                 except Exception as e:
-                    _LOGGER.warning("Failed to update Tempo tariffs: %s", e)
+                    _LOGGER.warning("Failed to update Tempo prices: %s", e)
             
             if not has_updated:
-                _LOGGER.warning("Failed to update tariffs for %s. Keeping previous prices.", self._contract)
+                _LOGGER.warning("Failed to update prices for %s. Keeping previous prices.", self._contract)
             else:
-                self._tariffs = new_tariffs
-                self._last_tariff_update = dt_util.now()
-                _LOGGER.info("Successfully updated tariffs from data.gouv.fr")
+                self._prices = new_prices
+                self._last_price_update = dt_util.now()
+                _LOGGER.info("Successfully updated prices from data.gouv.fr")
                 await self.async_refresh()
 
         except Exception as e:
-            _LOGGER.error("Unexpected error during tariff update: %s. Keeping previous prices.", e, exc_info=True)
+            _LOGGER.error("Unexpected error during price update: %s. Keeping previous prices.", e, exc_info=True)
 
     async def _fetch_and_parse_csv(self, url: str, parser_func: callable) -> dict:
         """Generic function to fetch a CSV and parse it."""
@@ -237,8 +255,8 @@ class TariffCoordinator(DataUpdateCoordinator):
             
         return True
 
-    def _parse_base_tariffs(self, csv_file: io.StringIO) -> dict:
-        """Parse Base tariff CSV."""
+    def _parse_base_prices(self, csv_file: io.StringIO) -> dict:
+        """Parse Base price CSV."""
         reader = self._get_csv_reader(csv_file)
         target_date = dt_util.now(dt_util.get_time_zone("Europe/Paris")).date()
 
@@ -251,15 +269,15 @@ class TariffCoordinator(DataUpdateCoordinator):
 
             try:
                 price = float(row["PART_VARIABLE_TTC"].replace(',', '.'))
-                _LOGGER.debug("Found Base tariff for %s kVA: %s", self._subscribed_power, price)
+                _LOGGER.debug("Found Base price for %s kVA: %s", self._subscribed_power, price)
                 return {"HP": price}
             except ValueError:
                 continue
-        _LOGGER.warning("Base tariff not found for %s kVA", self._subscribed_power)
+        _LOGGER.warning("Base price not found for %s kVA", self._subscribed_power)
         return {}
 
-    def _parse_hphc_tariffs(self, csv_file: io.StringIO) -> dict:
-        """Parse HP/HC tariff CSV."""
+    def _parse_hphc_prices(self, csv_file: io.StringIO) -> dict:
+        """Parse HP/HC price CSV."""
         reader = self._get_csv_reader(csv_file)
         target_date = dt_util.now(dt_util.get_time_zone("Europe/Paris")).date()
 
@@ -274,16 +292,16 @@ class TariffCoordinator(DataUpdateCoordinator):
                 hp_price = float(row["PART_VARIABLE_HP_TTC"].replace(',', '.'))
                 hc_price = float(row["PART_VARIABLE_HC_TTC"].replace(',', '.'))
                 prices = {"HP": hp_price, "HC": hc_price}
-                _LOGGER.debug("Found HP/HC tariffs for %s kVA: %s", self._subscribed_power, prices)
+                _LOGGER.debug("Found HP/HC prices for %s kVA: %s", self._subscribed_power, prices)
                 return prices
             except ValueError:
                 continue
         
-        _LOGGER.warning("HP/HC tariffs not fully found for %s kVA", self._subscribed_power)
+        _LOGGER.warning("HP/HC prices not fully found for %s kVA", self._subscribed_power)
         return {}
 
-    def _parse_tempo_tariffs(self, csv_file: io.StringIO) -> dict:
-        """Parse Tempo tariff CSV."""
+    def _parse_tempo_prices(self, csv_file: io.StringIO) -> dict:
+        """Parse Tempo price CSV."""
         reader = self._get_csv_reader(csv_file)
         target_date = dt_util.now(dt_util.get_time_zone("Europe/Paris")).date()
 
@@ -304,16 +322,16 @@ class TariffCoordinator(DataUpdateCoordinator):
                 prices["RED"]["HC"] = float(row["PART_VARIABLE_HCRouge_TTC"].replace(',', '.'))
                 prices["RED"]["HP"] = float(row["PART_VARIABLE_HPRouge_TTC"].replace(',', '.'))
                 
-                _LOGGER.debug("Found Tempo tariffs for %s kVA: %s", self._subscribed_power, prices)
+                _LOGGER.debug("Found Tempo prices for %s kVA: %s", self._subscribed_power, prices)
                 return prices
             except ValueError:
                 continue
 
-        _LOGGER.warning("Tempo tariffs not fully found for %s kVA", self._subscribed_power)
+        _LOGGER.warning("Tempo prices not fully found for %s kVA", self._subscribed_power)
         return {}
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Calculate the current tariff data."""
+        """Calculate the current prices data."""
         now = dt_util.now(dt_util.get_time_zone("Europe/Paris"))
         
         # Determine current period (HP/HC)
@@ -328,9 +346,9 @@ class TariffCoordinator(DataUpdateCoordinator):
         tempo_color = "inconnu"
 
         if self._contract == "Base":
-            price = self._tariffs.get("Base", {}).get("HP", 0.0)
+            price = self._prices.get("Base", {}).get("HP", 0.0)
         elif self._contract == "Heures Creuses":
-            price = self._tariffs.get("Heures Creuses", {}).get(current_period, 0.0)
+            price = self._prices.get("Heures Creuses", {}).get(current_period, 0.0)
         elif self._contract == "Tempo":
             tempo_day_change_time_str = self.tempo_coordinator.tempo_day_change_time_str
             today_date_str = get_tempo_date(0, tempo_day_change_time_str)
@@ -340,7 +358,7 @@ class TariffCoordinator(DataUpdateCoordinator):
             elif tempo_color_raw in ("blanc", "WHITE"): tempo_color = "WHITE"
             elif tempo_color_raw in ("rouge", "RED"): tempo_color = "RED"
 
-            price = self._tariffs.get("Tempo", {}).get(tempo_color, {}).get(current_period, 0.0)
+            price = self._prices.get("Tempo", {}).get(tempo_color, {}).get(current_period, 0.0)
 
         return {
             "price": price,
@@ -349,7 +367,7 @@ class TariffCoordinator(DataUpdateCoordinator):
             "contract": self._contract,
             "tempo_color": tempo_color if self._contract == "Tempo" else None,
             "last_update": now.isoformat(),
-            "tariffs_last_update": self._last_tariff_update.isoformat() if self._last_tariff_update else None,
-            "contract_prices": self._tariffs.get(self._contract, {}),
+            "prices_last_update": self._last_price_update.isoformat() if self._last_price_update else None,
+            "contract_prices": self._prices.get(self._contract, {}),
             "subscribed_power": self._subscribed_power,
         }

@@ -17,6 +17,7 @@
           "contract": "Type de contrat",
           "subscribed_power": "Puissance souscrite (kVA)",
           "offpeak_ranges": "Plages d'heures creuses (ex: 01:30-07:30,12:30-14:30)",
+          "price_update_interval": "Intervalle de mise à jour des prix (jours, défaut: 1)",
           "tempo_day_change_time": "Heure de changement de jour Tempo (défaut: 06:00:00)",
           "rte_tempo_color_refresh_time": "Heure de récupération API RTE (défaut: 07:05:00)",
           "edf_tempo_color_refresh_time": "Heure de récupération API EDF (défaut: 11:05:00)",

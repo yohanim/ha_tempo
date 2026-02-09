@@ -21,30 +21,6 @@ from .const import (
 from .forecast_coordinator import ForecastCoordinator
 # from .sensor_types import ForecastSensor
 
-
-# -------- Helper functions (copied from sensor.py of RTE Tempo) ----------------
-# def get_color_emoji(value: str) -> str:
-#     if value == "rouge":
-#         return SENSOR_COLOR_RED_EMOJI
-#     if value == "blanc":
-#         return SENSOR_COLOR_WHITE_EMOJI
-#     if value == "bleu":
-#         return SENSOR_COLOR_BLUE_EMOJI
-#     return SENSOR_COLOR_UNKNOWN_EMOJI
-
-
-# def get_color_name(value: str) -> str:
-#     if value == "rouge":
-#         return SENSOR_COLOR_RED_NAME
-#     if value == "blanc":
-#         return SENSOR_COLOR_WHITE_NAME
-#     if value == "bleu":
-#         return SENSOR_COLOR_BLUE_NAME
-#     return SENSOR_COLOR_UNKNOWN_NAME
-
-
-
-
 # ---------------- Forecast Sensor ----------------------
 
 
@@ -126,41 +102,3 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
         day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
         return asdict(day_data)
-
-    # ---------------- Coordinator update handler ----------------------
-
-    # def _handle_coordinator_update(self) -> None:
-    #     data = self.coordinator.data
-
-    #     if not data or len(data) <= self.index:
-    #         self._attr_native_value = None
-    #         self._attr_extra_state_attributes = {}
-    #         self.async_write_ha_state()
-    #         return
-
-    #     forecast: ForecastSensor = data[self.index]
-    #     color = forecast.color.lower()
-
-    #     if color not in ["bleu", "blanc", "rouge"]:
-    #         color = "inconnu"
-
-    #     # ----- VISUAL VERSION -----
-    #     if self.visual:
-    #         self._attr_native_value = get_color_emoji(color)
-    #         self._attr_icon = get_color_icon(color)
-
-    #     # ----- TEXT VERSION -----
-    #     else:
-    #         self._attr_native_value = get_color_name(color)
-
-    #     # Extra attributes for both sensors
-    #     lang = self.hass.config.language
-    #     self._attr_extra_state_attributes = {
-    #         "day": forecast.day,
-    #         "short_date": forecast.short_date,
-    #         "date": forecast.date.isoformat(),
-    #         "probability": forecast.probability,
-    #         "attribution": "Données Tempo : Open DPE (https://open-dpe.fr)",
-    #     }
-
-    #     self.async_write_ha_state()

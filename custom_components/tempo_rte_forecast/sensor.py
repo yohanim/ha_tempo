@@ -31,9 +31,9 @@ from .tempo_sensor import TempoSensor
 from .forecast_coordinator import ForecastCoordinator
 from .forecast_sensor import OpenDPEForecastSensor
 
-# Importing coordinator and sensor for tariff data
-from .tariff_coordinator import TariffCoordinator
-from .tariff_sensor import TariffSensor, SpecificTariffSensor
+# Importing coordinator and sensor for prices data
+from .prices_coordinator import PriceCoordinator
+from .prices_sensor import PriceSensor, SpecificPriceSensor
 
 
 async def async_setup_entry(
@@ -56,7 +56,7 @@ async def async_setup_entry(
     sensors = []
     
     # Skip index 0 (J+1) because RTE provides the official J+1 sensor
-    for index in range(1, NUM_FORECAST_DAYS):
+    for index in range(0, NUM_FORECAST_DAYS):
         # Text version
         sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, visual=False, entry=entry))
         # Visual version (emoji)
@@ -64,23 +64,23 @@ async def async_setup_entry(
         
     async_add_entities(sensors, True)
 
-    # Add tariff sensor
-    tariff_coordinator = TariffCoordinator(hass, entry, coordinator)
-    await tariff_coordinator.async_config_entry_first_refresh()
+    # Add prices sensor
+    price_coordinator = PriceCoordinator(hass, entry, coordinator)
+    await price_coordinator.async_config_entry_first_refresh()
     
-    tariff_sensors = [TariffSensor(tariff_coordinator, entry)]
+    price_sensors = [PriceSensor(price_coordinator, entry)]
     
     # Add specific sensors based on contract type
     contract = entry.options.get(CONF_CONTRACT, "Tempo")
     
     if contract == "Base":
-        tariff_sensors.append(SpecificTariffSensor(tariff_coordinator, entry, key="HP"))
+        price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HP"))
     elif contract == "Heures Creuses":
-        tariff_sensors.append(SpecificTariffSensor(tariff_coordinator, entry, key="HP"))
-        tariff_sensors.append(SpecificTariffSensor(tariff_coordinator, entry, key="HC"))
+        price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HP"))
+        price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HC"))
     elif contract == "Tempo":
         for color in ["BLUE", "WHITE", "RED"]:
-            tariff_sensors.append(SpecificTariffSensor(tariff_coordinator, entry, key="HP", color=color))
-            tariff_sensors.append(SpecificTariffSensor(tariff_coordinator, entry, key="HC", color=color))
+            price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HP", color=color))
+            price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HC", color=color))
             
-    async_add_entities(tariff_sensors)
+    async_add_entities(price_sensors)

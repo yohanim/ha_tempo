@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime, timedelta
 import json
-from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry

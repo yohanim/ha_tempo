@@ -6,31 +6,30 @@ from typing import Any
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CURRENCY_EURO, ATTR_ATTRIBUTION
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, DEVICE_NAME, DEVICE_MANUFACTURER, DEVICE_MODEL
-from .tariff_coordinator import TariffCoordinator
+from .prices_coordinator import PriceCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-ATTRIBUTION = "Tarifs basés sur les options de l'intégration"
+ATTRIBUTION = "Prix basés sur les options de l'intégration"
 
-class TariffSensor(CoordinatorEntity[TariffCoordinator], SensorEntity):
-    """Sensor for the current electricity tariff."""
+class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
+    """Sensor for the current electricity price."""
 
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = f"{CURRENCY_EURO}/kWh"
     _attr_icon = "mdi:currency-eur"
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: TariffCoordinator, entry: ConfigEntry):
+    def __init__(self, coordinator: PriceCoordinator, entry: ConfigEntry):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.entry = entry
-        self._attr_unique_id = f"{DOMAIN}_current_tariff"
-        self._attr_name = "Tarif actuel"
+        self._attr_unique_id = f"{DOMAIN}_current_price"
+        self._attr_name = "Prix actuel"
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -44,7 +43,7 @@ class TariffSensor(CoordinatorEntity[TariffCoordinator], SensorEntity):
 
     @property
     def native_value(self) -> float | None:
-        """Return the current tariff price."""
+        """Return the current price."""
         if self.coordinator.data:
             return self.coordinator.data.get("price")
         return None
@@ -62,22 +61,22 @@ class TariffSensor(CoordinatorEntity[TariffCoordinator], SensorEntity):
             "is_hc": data.get("is_hc"),
             "current_period": data.get("current_period"),
             "last_update": data.get("last_update"),
-            "tariffs_last_update": data.get("tariffs_last_update"),
+            "prices_last_update": data.get("prices_last_update"),
         }
         if data.get("contract") == "Tempo":
             attributes["tempo_color"] = data.get("tempo_color")
 
         return attributes
 
-class SpecificTariffSensor(CoordinatorEntity[TariffCoordinator], SensorEntity):
-    """Sensor for a specific tariff price component (e.g. 'Tempo Red HP')."""
+class SpecificPriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
+    """Sensor for a specific price component (e.g. 'Tempo Red HP')."""
 
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = f"{CURRENCY_EURO}/kWh"
     _attr_icon = "mdi:currency-eur"
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: TariffCoordinator, entry: ConfigEntry, key: str, color: str | None = None):
+    def __init__(self, coordinator: PriceCoordinator, entry: ConfigEntry, key: str, color: str | None = None):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.entry = entry
@@ -115,7 +114,7 @@ class SpecificTariffSensor(CoordinatorEntity[TariffCoordinator], SensorEntity):
 
     @property
     def native_value(self) -> float | None:
-        """Return the specific tariff price."""
+        """Return the specific price."""
         if not self.coordinator.data:
             return None
             
