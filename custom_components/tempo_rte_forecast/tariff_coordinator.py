@@ -61,7 +61,7 @@ class TariffCoordinator(DataUpdateCoordinator):
         self._subscribed_power = DEFAULT_SUBSCRIBED_POWER
         self._tariffs = FALLBACK_PRICES
         self._last_tariff_update = None
-        self._listeners = []
+        self._scheduled_update_listeners = []
         self._setup_from_options()
 
         # Listen for option changes
@@ -106,9 +106,9 @@ class TariffCoordinator(DataUpdateCoordinator):
     def _schedule_listeners(self):
         """Schedule updates at specific times."""
         # Clear existing listeners
-        for remove_listener in self._listeners:
+        for remove_listener in self._scheduled_update_listeners:
             remove_listener()
-        self._listeners.clear()
+        self._scheduled_update_listeners.clear()
 
         trigger_times = set()
         
@@ -123,7 +123,7 @@ class TariffCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("Scheduling tariff updates at: %s", [t.strftime("%H:%M:%S") for t in trigger_times])
 
         for t in trigger_times:
-            self._listeners.append(
+            self._scheduled_update_listeners.append(
                 async_track_time_change(self.hass, self.async_refresh, hour=t.hour, minute=t.minute, second=t.second)
             )
 
