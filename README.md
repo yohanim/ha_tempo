@@ -1,66 +1,58 @@
-# Home Assistant - Intégration EDF Tempo
+# Home Assistant - Intégration Tempo RTE, Prévisions & Prix
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
-[![GitHub release](https://img.shields.io/github/release/chrisbansart/ha_tempo.svg)](https://github.com/chrisbansart/ha_tempo/releases)
-[![License](https://img.shields.io/github/license/chrisbansart/ha_tempo.svg)](LICENSE)
+[![GitHub release](https://img.shields.io/github/release/yohanim/ha_tempo.svg)](https://github.com/yohanim/ha_tempo/releases)
+[![License](https://img.shields.io/github/license/yohanim/ha_tempo.svg)](LICENSE.md)
 
-[![Ouvrir votre instance Home Assistant et ajouter ce dépôt dans HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=chrisbansart&repository=ha_tempo&category=integration)
+[![Ouvrir votre instance Home Assistant et ajouter ce dépôt dans HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=yohanim&repository=ha_tempo&category=integration)
 
-[![Ouvrir votre instance Home Assistant et configurer l'intégration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=tempo)
+[![Ouvrir votre instance Home Assistant et configurer l'intégration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=tempo_rte_forecast)
 
-Intégration pour afficher les couleurs Tempo dans Home Assistant avec **une seule entité** contenant tous les états.
+Intégration complète pour le suivi du contrat Tempo (et autres) dans Home Assistant.
 
-Récupère les données en temps réel depuis de le site opendata de RTE. Ce plugin **ne nécessite pas** de créer un compte "dévelopeur" sur le site RTE pour accéder à l’API de RTE. Il permet de créer des automatisations basées sur les périodes tarifaires (Heures Creuses/Heures Pleines) et les couleurs (Bleu/Blanc/Rouge).
+Elle récupère les données depuis plusieurs sources fiables pour fournir un ensemble complet de capteurs :
+- **Couleurs Tempo J et J+1** depuis l'API open-data de RTE.
+- **Prévisions de couleur J+2 à J+9** depuis [Open-DPE](https://open-dpe.fr/).
+- **Prix de l'électricité** en temps réel selon votre contrat (Base, Heures Creuses, Tempo) et votre puissance souscrite, depuis les grilles officielles de [data.gouv.fr](https://www.data.gouv.fr/).
 
 ## 📦 Installation
 
-Utilisez les boutons bleus ci-dessus pour installer via HACS puis configurer l'intégration.
+Utilisez les boutons bleus ci-dessus pour installer l'intégration via HACS puis l'ajouter depuis la page des intégrations de Home Assistant.
 
-**Installation manuelle** : Copiez le contenu du dossier `custom_components/tempo/` dans votre configuration Home Assistant, puis redémarrez.
+**Installation manuelle** : Copiez le contenu du dossier `custom_components/tempo_rte_forecast/` dans votre dossier `custom_components` de Home Assistant, puis redémarrez.
 
-## 🎯 L'entité unique
+## 🎯 Capteurs principaux
 
-Une seule entité : `sensor.edf_tempo`
+Cette intégration crée plusieurs capteurs pour une granularité maximale.
 
-**État** : Affiche la couleur actuelle avec la période  
-Exemples : `Rouge HP`, `Blanc HC`, `Bleu HP`
+- **`sensor.rte_tempo_color_j`** : Affiche la couleur du jour actuel (ex: 🔵).
+- **`sensor.rte_tempo_color_j_1`** : Affiche la couleur du lendemain (ex: ⚪).
+- **`sensor.prix_actuel`** : Affiche le prix actuel du kWh en fonction de votre contrat et de la période en cours.
+- **`sensor.prix_bleu_hp`**, **`sensor.prix_rouge_hc`**, etc. : Des capteurs dédiés pour chaque tarif de votre contrat.
+- **`sensor.opendpe_j2`**, **`sensor.opendpe_j3`**, etc. : Les prévisions de couleur pour les jours à venir.
 
 ## 📊 Attributs disponibles
 
-### Informations actuelles
+Les informations sont réparties sur les différents capteurs pour plus de clarté.
 
-- `current_hour` : Heure actuelle
-- `current_period` : "HP" ou "HC"
-- `is_hc` : true/false (heures creuses)
-- `is_hp` : true/false (heures pleines)
+### `sensor.prix_actuel`
 
-### Jour actuel (J)
+- `current_period`: "HP" ou "HC".
+- `is_hc`: `true` si la période actuelle est en Heures Creuses.
+- `contract`: Votre type de contrat (Base, Heures Creuses, Tempo).
+- `tempo_color`: La couleur Tempo en cours si votre contrat est Tempo.
+- `prices_last_update`: Date de la dernière mise à jour des grilles de prix.
 
-- `today_date` : Date (YYYY-MM-DD)
-- `today_color` : "Rouge", "Blanc" ou "Bleu"
-- `today_color_en` : "red", "white" ou "blue"
-- `today_color_code` : 1 (bleu), 2 (blanc), 3 (rouge)
-- `today_color_emoji`: "🔵","⚪","🔴"
-- `today_is_red` / `today_is_white` / `today_is_blue` : true/false
+### `sensor.rte_tempo_color_j` (et J+1)
 
-### Lendemain (J+1)
+- `date`: La date du jour concerné.
+- `color`: Le nom de la couleur (Bleu, Blanc, Rouge).
+- `is_red` / `is_white` / `is_blue`: `true` si la couleur correspond.
 
-- `tomorrow_date` : Date (YYYY-MM-DD)
-- `tomorrow_color` : "Rouge", "Blanc" ou "Bleu"
-- `tomorrow_color_en` : "red", "white" ou "blue"
-- `tomorrow_color_code` : 1, 2 ou 3
-- `tomorrow_color_emoji` : "🔵","⚪","🔴"
-- `tomorrow_is_red` / `tomorrow_is_white` / `tomorrow_is_blue` : true/false
+### `sensor.prix_bleu_hp` (et autres capteurs de prix spécifiques)
 
-### Combinaisons pratiques
-
-- `today_is_red_hp` / `today_is_red_hc` : true si jour rouge + période correspondante
-- `today_is_white_hp` / `today_is_white_hc`
-- `today_is_blue_hp` / `today_is_blue_hc`
-
-### Autres
-
-- `season` : Saison actuelle (ex: "2024-2025")
+- `active`: `true` si ce tarif est celui qui est actuellement appliqué.
+- `subscribed_power`: Votre puissance souscrite en kVA.
 
 ## 🤖 Exemples d'automatisations
 
@@ -70,10 +62,8 @@ Exemples : `Rouge HP`, `Blanc HC`, `Bleu HP`
 automation:
   - alias: "Économie jour rouge HP"
     trigger:
-      - platform: state
-        entity_id: sensor.edf_tempo
-        attribute: today_is_red_hp
-        to: true
+      - platform: template
+        value_template: "{{ is_state_attr('sensor.rte_tempo_color_j', 'is_red', true) and is_state_attr('sensor.prix_actuel', 'current_period', 'HP') }}"
     action:
       - service: climate.set_temperature
         target:
@@ -92,8 +82,8 @@ automation:
   - alias: "Alerte J+1 rouge"
     trigger:
       - platform: state
-        entity_id: sensor.edf_tempo
-        attribute: tomorrow_is_red
+        entity_id: sensor.rte_tempo_color_j_1
+        attribute: is_red
         to: true
     action:
       - service: notify.mobile_app
@@ -109,7 +99,7 @@ automation:
   - alias: "Activation HC"
     trigger:
       - platform: state
-        entity_id: sensor.edf_tempo
+        entity_id: sensor.prix_actuel
         attribute: is_hc
         to: true
     action:
@@ -132,11 +122,11 @@ automation:
 type: markdown
 content: |
   ## Tempo aujourd'hui
-  Couleur : **{{ state_attr('sensor.edf_tempo', 'today_color_emoji') }}**
-  Période : **{{ state_attr('sensor.edf_tempo', 'current_period') }}**
+  Couleur : **{{ states('sensor.rte_tempo_color_j') }}**
+  Période : **{{ state_attr('sensor.prix_actuel', 'current_period') }}**
 
   ## Tempo demain
-  Couleur : **{{ state_attr('sensor.edf_tempo', 'tomorrow_color_emoji') }}**
+  Couleur : **{{ states('sensor.rte_tempo_color_j_1') }}**
 ```
 
 ### 5. Utiliser les attributs dans les conditions
@@ -158,88 +148,41 @@ automation:
 
 L'intégration se met à jour **automatiquement** aux moments clés :
 
-### Mises à jour programmées
+### Mises à jour programmées (par défaut)
 
-- **6h00** : 🌅 Passage en Heures Pleines + Nouveau jour J
+- **`tempo_day_change_time` (défaut 06:00)** : 🌅 Changement de jour Tempo.
+  - Le capteur `sensor.rte_tempo_color_j` prend la couleur du nouveau jour.
+  - Le capteur `sensor.prix_actuel` change de période si cette heure correspond à une transition HP/HC.
 
-  - L'attribut `current_period` passe à "HP"
-  - Les attributs `today_is_*_hp` deviennent actifs
-  - Les attributs `today_is_*_hc` deviennent inactifs
-  - La nouvelle couleur du jour est appliquée
+- **5 minutes avant le changement de jour** : 💰 Mise à jour des prix.
+  - L'intégration vérifie si une nouvelle grille tarifaire est disponible sur data.gouv.fr (selon l'intervalle en jours que vous avez défini).
 
-- **7h05** : 📡 Récupération API de la couleur J+1
+- **`rte_tempo_color_refresh_time` (défaut 07:05)** : 📡 Récupération API RTE de la couleur J+1.
+  - Mise à jour du capteur `sensor.rte_tempo_color_j_1`.
 
-  - Appel à l'API RTE pour obtenir la couleur du lendemain
-  - Mise à jour des attributs `tomorrow_*`
-  - Décalé de 5 minutes pour éviter la congestion de l'API
+- **`edf_tempo_color_refresh_time` (défaut 11:05)** : 📡 Nouvelle tentative de récupération API.
 
-- **9h05, 11h05, 13h05** : 🔄 Retries automatiques
-  - Si la récupération de 7h05 a échoué, nouvelles tentatives
-  - Assure la fiabilité même si l'API RTE est temporairement indisponible
+- **Plages d'heures creuses** : 🌙 Passage en Heures Creuses/Pleines.
+  - Le capteur `sensor.prix_actuel` met à jour ses attributs `is_hc` et `current_period`.
 
-- **22h00** : 🌙 Passage en Heures Creuses
-  - L'attribut `current_period` passe à "HC"
-  - Les attributs `today_is_*_hc` deviennent actifs
-  - Les attributs `today_is_*_hp` deviennent inactifs
+## 🎨 Template Sensor pour simplifier les automatisations (optionnel)
 
-### Automatisations déclenchées automatiquement
-
-Ces changements déclenchent vos automatisations **sans intervention** :
-
-```yaml
-# S'active automatiquement à 22h chaque soir
-trigger:
-  - platform: state
-    entity_id: sensor.edf_tempo
-    attribute: is_hc
-    to: true
-
-# S'active automatiquement à 6h si jour rouge
-trigger:
-  - platform: state
-    entity_id: sensor.edf_tempo
-    attribute: today_is_red_hp
-    to: true
-```
-
-## 📱 Interface utilisateur
-
-Vous pouvez créer un card personnalisé pour afficher joliment les infos :
-
-```yaml
-type: entities
-title: EDF Tempo
-entities:
-  - entity: sensor.edf_tempo
-    name: État actuel
-  - type: attribute
-    entity: sensor.edf_tempo
-    attribute: today_color
-    name: Couleur aujourd'hui
-  - type: attribute
-    entity: sensor.edf_tempo
-    attribute: tomorrow_color
-    name: Couleur demain
-  - type: attribute
-    entity: sensor.edf_tempo
-    attribute: current_period
-    name: Période
-```
-
-## 🎨 Template Sensor pour des sensors séparés (optionnel)
-
-Si vous préférez avoir des sensors individuels, créez des template sensors :
+Il est recommandé de créer des `template sensors` pour recréer des états combinés faciles à utiliser dans les automatisations.
 
 ```yaml
 template:
   - binary_sensor:
       - name: "Jour Rouge HP"
-        state: "{{ state_attr('sensor.edf_tempo', 'today_is_red_hp') }}"
+        state: "{{ is_state_attr('sensor.rte_tempo_color_j', 'is_red', true) and is_state_attr('sensor.prix_actuel', 'current_period', 'HP') }}"
         icon: mdi:flash-alert
 
       - name: "Demain Rouge"
-        state: "{{ state_attr('sensor.edf_tempo', 'tomorrow_is_red') }}"
+        state: "{{ is_state_attr('sensor.rte_tempo_color_j_1', 'is_red', true) }}"
         icon: mdi:calendar-alert
+
+      - name: "Heures Creuses"
+        state: "{{ is_state_attr('sensor.prix_actuel', 'is_hc', true) }}"
+        icon: mdi:power-sleep
 ```
 
 ## 🐛 Support
@@ -248,10 +191,11 @@ Pour signaler un bug ou demander une fonctionnalité, ouvrez une issue sur GitHu
 
 ## 📄 Licence
 
-GNU GPL v3 © 2025 Christophe Bansart
+GNU GPL v3 © 2025 Kevin Gossent
 
 Ce logiciel est distribué sous licence GNU General Public License v3.0. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
 ---
 
-**Développé par Christophe Bansart**
+**Développé par Kevin Gossent**
+**Développé par l'intégration de Christophe Bansart [https://github.com/chrisbansart/ha_tempo](https://github.com/chrisbansart/ha_tempo)**
