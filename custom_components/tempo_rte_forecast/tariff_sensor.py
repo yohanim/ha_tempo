@@ -104,6 +104,16 @@ class SpecificTariffSensor(CoordinatorEntity[TariffCoordinator], SensorEntity):
         self._attr_name = " ".join(name_parts)
 
     @property
+    def device_info(self) -> DeviceInfo:
+        """Return device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, "forecast")},
+            name=DEVICE_NAME,
+            manufacturer=DEVICE_MANUFACTURER,
+            model=DEVICE_MODEL,
+        )
+
+    @property
     def native_value(self) -> float | None:
         """Return the specific tariff price."""
         if not self.coordinator.data:
