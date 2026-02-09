@@ -37,6 +37,10 @@ DEVICE_MODEL = "Calendrier Tempo"
 CONF_TEMPO_DAY_CHANGE_TIME = "tempo_day_change_time"
 CONF_TEMPO_RETRY_DELAY = "tempo_retry_delay_minutes"
 CONF_FORECAST_RETRY_DELAY = "forecast_retry_delay_minutes"
+CONF_RTE_TEMPO_COLOR_REFRESH_TIME = "rte_tempo_color_refresh_time"
+DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME = "07:05:00"
+CONF_EDF_TEMPO_COLOR_REFRESH_TIME = "edf_tempo_color_refresh_time"
+DEFAULT_EDF_TEMPO_COLOR_REFRESH_TIME = "11:05:00"
 
 # For tariffs
 CONF_CONTRACT = "contract"

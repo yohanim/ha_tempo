@@ -23,6 +23,10 @@ from .const import (
     TEMPO_RETRY_DELAY_MINUTES,
     CONF_TEMPO_DAY_CHANGE_TIME,
     CONF_TEMPO_RETRY_DELAY,
+    CONF_RTE_TEMPO_COLOR_REFRESH_TIME,
+    DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME,
+    CONF_EDF_TEMPO_COLOR_REFRESH_TIME,
+    DEFAULT_EDF_TEMPO_COLOR_REFRESH_TIME,
 )
 from .utils import get_tempo_date, get_tempo_season
 
@@ -42,6 +46,10 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         self.entry = entry
         self.tempo_day_change_time_str = entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
         self.tempo_day_change_time = time.fromisoformat(self.tempo_day_change_time_str)
+        self.rte_tempo_refresh_time_str = entry.options.get(CONF_RTE_TEMPO_COLOR_REFRESH_TIME, DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME)
+        self.rte_tempo_refresh_time = time.fromisoformat(self.rte_tempo_refresh_time_str)
+        self.edf_tempo_refresh_time_str = entry.options.get(CONF_EDF_TEMPO_COLOR_REFRESH_TIME, DEFAULT_EDF_TEMPO_COLOR_REFRESH_TIME)
+        self.edf_tempo_refresh_time = time.fromisoformat(self.edf_tempo_refresh_time_str)
         self.retry_delay = entry.options.get(CONF_TEMPO_RETRY_DELAY, TEMPO_RETRY_DELAY_MINUTES)
 
         self.tempo_data = {}
@@ -66,16 +74,25 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             second=self.tempo_day_change_time.second
         )
 
-        # À 7h05 : récupération API pour couleur J+1 (décalé de 5min pour éviter la congestion)
+        # À {self.rte_tempo_refresh_time_str} : récupération API pour couleur J+1
         async_track_time_change(
             self.hass,
             self._trigger_api_refresh,
-            hour=6,
-            minute=35,
-            second=0
+            hour=self.rte_tempo_refresh_time.hour,
+            minute=self.rte_tempo_refresh_time.minute,
+            second=self.rte_tempo_refresh_time.second
         )
 
-        _LOGGER.info("Mises à jour programmées: %s (Changement jour Tempo), 7h05 (API J+1)", self.tempo_day_change_time_str)
+        # À {self.edf_tempo_refresh_time_str} : récupération API pour couleur J+1 (EDF)
+        async_track_time_change(
+            self.hass,
+            self._trigger_api_refresh,
+            hour=self.edf_tempo_refresh_time.hour,
+            minute=self.edf_tempo_refresh_time.minute,
+            second=self.edf_tempo_refresh_time.second
+        )
+
+        _LOGGER.info("Mises à jour programmées: %s (Changement jour Tempo), %s (API RTE), %s (API EDF)", self.tempo_day_change_time_str, self.rte_tempo_refresh_time_str, self.edf_tempo_refresh_time_str)
 
     async def _trigger_api_refresh(self, _now: datetime | None = None) -> None:
         """Récupération API à 7h pour couleur J+1."""
@@ -87,7 +104,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             _LOGGER.info("Données J+1 déjà récupérées aujourd'hui, skip")
             return
         
-        _LOGGER.info("7h05 - Récupération API pour couleur J+1")
+        _LOGGER.info("%s - Récupération API pour couleur J+1", now.strftime("%H:%M:%S"))
         self._last_api_call = today_date
         await self.async_refresh()
 

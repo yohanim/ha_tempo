@@ -32,6 +32,10 @@ from .const import (
     CONF_TEMPO_DAY_CHANGE_TIME,
     CONF_TEMPO_RETRY_DELAY,
     CONF_FORECAST_RETRY_DELAY,
+    CONF_RTE_TEMPO_COLOR_REFRESH_TIME,
+    DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME,
+    CONF_EDF_TEMPO_COLOR_REFRESH_TIME,
+    DEFAULT_EDF_TEMPO_COLOR_REFRESH_TIME,
     CONF_CONTRACT,
     CONF_OFFPEAK_RANGES,
     DEFAULT_OFFPEAK_RANGES,
@@ -103,6 +107,14 @@ class OptionsFlowHandler(OptionsFlow):
                 vol.Optional(
                     CONF_TEMPO_DAY_CHANGE_TIME, 
                     default=current_options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
+                ): selector.TimeSelector(),
+                vol.Optional(
+                    CONF_RTE_TEMPO_COLOR_REFRESH_TIME,
+                    default=current_options.get(CONF_RTE_TEMPO_COLOR_REFRESH_TIME, current_options.get("api_refresh_time", DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME))
+                ): selector.TimeSelector(),
+                vol.Optional(
+                    CONF_EDF_TEMPO_COLOR_REFRESH_TIME,
+                    default=current_options.get(CONF_EDF_TEMPO_COLOR_REFRESH_TIME, DEFAULT_EDF_TEMPO_COLOR_REFRESH_TIME)
                 ): selector.TimeSelector(),
                 vol.Optional(CONF_TEMPO_RETRY_DELAY, default=int(current_options.get(CONF_TEMPO_RETRY_DELAY, TEMPO_RETRY_DELAY_MINUTES))): int,
                 vol.Optional(CONF_FORECAST_RETRY_DELAY, default=int(current_options.get(CONF_FORECAST_RETRY_DELAY, FORECAST_RETRY_DELAY_MINUTES))): int,
