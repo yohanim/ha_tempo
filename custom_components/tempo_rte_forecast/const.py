@@ -37,3 +37,13 @@ DEVICE_MODEL = "Calendrier Tempo"
 CONF_TEMPO_DAY_CHANGE_TIME = "tempo_day_change_time"
 CONF_TEMPO_RETRY_DELAY = "tempo_retry_delay_minutes"
 CONF_FORECAST_RETRY_DELAY = "forecast_retry_delay_minutes"
+
+# For tariffs
+CONF_CONTRACT = "contract"
+CONF_OFFPEAK_RANGES = "offpeak_ranges"
+DEFAULT_OFFPEAK_RANGES = "22:00-06:00"
+CONF_SUBSCRIBED_POWER = "subscribed_power"
+DEFAULT_SUBSCRIBED_POWER = "9"
+TARIF_BASE_URL="https://www.data.gouv.fr/fr/datasets/r/c13d05e5-9e55-4d03-bf7e-042a2ade7e49"
+TARIF_HPHC_URL="https://www.data.gouv.fr/fr/datasets/r/f7303b3a-93c7-4242-813d-84919034c416"
+TARIF_TEMPO_URL="https://www.data.gouv.fr/fr/datasets/r/0c3d1d36-c412-4620-8566-e5cbb4fa2b5a"

@@ -32,6 +32,11 @@ from .const import (
     CONF_TEMPO_DAY_CHANGE_TIME,
     CONF_TEMPO_RETRY_DELAY,
     CONF_FORECAST_RETRY_DELAY,
+    CONF_CONTRACT,
+    CONF_OFFPEAK_RANGES,
+    DEFAULT_OFFPEAK_RANGES,
+    CONF_SUBSCRIBED_POWER,
+    DEFAULT_SUBSCRIBED_POWER,
 )
 
 
@@ -68,14 +73,38 @@ class OptionsFlowHandler(OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
+        current_options = self.config_entry.options
+
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
                 vol.Optional(
+                    CONF_CONTRACT,
+                    default=current_options.get(CONF_CONTRACT, "Tempo")
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=["Base", "Heures Creuses", "Tempo"],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Optional(
+                    CONF_SUBSCRIBED_POWER,
+                    default=current_options.get(CONF_SUBSCRIBED_POWER, DEFAULT_SUBSCRIBED_POWER)
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=['3', '6', '9', '12', '15', '18', '24', '30', '36'],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Optional(
+                    CONF_OFFPEAK_RANGES,
+                    default=current_options.get(CONF_OFFPEAK_RANGES, DEFAULT_OFFPEAK_RANGES)
+                ): str,
+                vol.Optional(
                     CONF_TEMPO_DAY_CHANGE_TIME, 
-                    default=self.config_entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
+                    default=current_options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
                 ): selector.TimeSelector(),
-                vol.Optional(CONF_TEMPO_RETRY_DELAY, default=int(self.config_entry.options.get(CONF_TEMPO_RETRY_DELAY, TEMPO_RETRY_DELAY_MINUTES))): int,
-                vol.Optional(CONF_FORECAST_RETRY_DELAY, default=int(self.config_entry.options.get(CONF_FORECAST_RETRY_DELAY, FORECAST_RETRY_DELAY_MINUTES))): int,
+                vol.Optional(CONF_TEMPO_RETRY_DELAY, default=int(current_options.get(CONF_TEMPO_RETRY_DELAY, TEMPO_RETRY_DELAY_MINUTES))): int,
+                vol.Optional(CONF_FORECAST_RETRY_DELAY, default=int(current_options.get(CONF_FORECAST_RETRY_DELAY, FORECAST_RETRY_DELAY_MINUTES))): int,
             }),
         )

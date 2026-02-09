@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from .const import CONF_CONTRACT
 
 # Importing coordinator and sensor for tempo validated data
 from .tempo_coordinator import TempoDataCoordinator
@@ -29,6 +30,10 @@ from .tempo_sensor import TempoSensor
 # Importing coordinator and sensors for forecast data
 from .forecast_coordinator import ForecastCoordinator
 from .forecast_sensor import OpenDPEForecastSensor
+
+# Importing coordinator and sensor for tariff data
+from .tariff_coordinator import TariffCoordinator
+from .tariff_sensor import TariffSensor, SpecificTariffSensor
 
 
 async def async_setup_entry(
@@ -58,3 +63,24 @@ async def async_setup_entry(
         sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, visual=True, entry=entry))
         
     async_add_entities(sensors, True)
+
+    # Add tariff sensor
+    tariff_coordinator = TariffCoordinator(hass, entry, coordinator)
+    await tariff_coordinator.async_config_entry_first_refresh()
+    
+    tariff_sensors = [TariffSensor(tariff_coordinator, entry)]
+    
+    # Add specific sensors based on contract type
+    contract = entry.options.get(CONF_CONTRACT, "Tempo")
+    
+    if contract == "Base":
+        tariff_sensors.append(SpecificTariffSensor(tariff_coordinator, entry, key="HP"))
+    elif contract == "Heures Creuses":
+        tariff_sensors.append(SpecificTariffSensor(tariff_coordinator, entry, key="HP"))
+        tariff_sensors.append(SpecificTariffSensor(tariff_coordinator, entry, key="HC"))
+    elif contract == "Tempo":
+        for color in ["BLUE", "WHITE", "RED"]:
+            tariff_sensors.append(SpecificTariffSensor(tariff_coordinator, entry, key="HP", color=color))
+            tariff_sensors.append(SpecificTariffSensor(tariff_coordinator, entry, key="HC", color=color))
+            
+    async_add_entities(tariff_sensors)

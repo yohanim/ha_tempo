@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import date, datetime, timedelta, time
+import logging
 from homeassistant.util import dt as dt_util
 from .const import (
     TEMPO_DAY_CHANGE_TIME,
@@ -7,6 +8,8 @@ from .const import (
 )
 
 def get_tempo_date(offset_days: int = 0, tempo_day_change_time_str: str = TEMPO_DAY_CHANGE_TIME) -> str:
+    _LOGGER = logging.getLogger(__name__)
+
     """
     Retourne la date Tempo (en tenant compte de l'heure de changement).
     offset_days: 0 pour J, 1 pour J+1
@@ -17,6 +20,39 @@ def get_tempo_date(offset_days: int = 0, tempo_day_change_time_str: str = TEMPO_
 
     target_date = now - change_time_delta + timedelta(days=offset_days)
     return target_date.strftime("%Y-%m-%d")
+
+def parse_offpeak_ranges(ranges_str: str) -> list[tuple[time, time]]:
+    """Parse a string of time ranges into a list of time tuples."""
+    _LOGGER = logging.getLogger(__name__)
+    ranges = []
+    if not ranges_str:
+        return ranges
+    for part in ranges_str.split(','):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            start_str, end_str = part.split('-')
+            start_time = time.fromisoformat(start_str.strip())
+            end_time = time.fromisoformat(end_str.strip())
+            ranges.append((start_time, end_time))
+        except ValueError as e:
+            _LOGGER.error("Plage horaire invalide '%s': %s", part, e)
+    return ranges
+
+def is_offpeak(now: datetime, offpeak_ranges: list[tuple[time, time]]) -> bool:
+    """Check if the current time is within any of the off-peak ranges."""
+    current_time = now.time()
+    for start_time, end_time in offpeak_ranges:
+        # Case 1: Range does not cross midnight (e.g., 01:00-05:00)
+        if start_time < end_time:
+            if start_time <= current_time < end_time:
+                return True
+        # Case 2: Range crosses midnight (e.g., 22:00-06:00)
+        else:
+            if current_time >= start_time or current_time < end_time:
+                return True
+    return False
 
 def get_tempo_season(date_ref: date | datetime | None = None) -> str:
     """Retourne la saison Tempo actuelle (ex: '2024-2025'). Changement au 1er août."""
