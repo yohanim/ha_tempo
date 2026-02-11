@@ -52,9 +52,13 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Le sensor est disponible si on a au moins des données en cache."""
+        # Pour le capteur J+1, on le veut toujours disponible pour afficher "Inconnu".
+        if self.index == 1:
+            return True
+
         day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
-        return day_data != None
+        return day_data is not None
 
     @property
     def native_value(self) -> str:
@@ -81,6 +85,13 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         day_color_en = get_color_name_en(day_data)
         day_color_emoji = get_color_emoji(day_data)
         
+        if day_data is None:
+            data_source = "none"
+        elif day in self.coordinator.tempo_data:
+            data_source = "api"
+        else:
+            data_source = "cache"
+
         return {
             # Jour J
             "date": day,
@@ -93,5 +104,5 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
             "is_red": day_color_code == 3,
 
             # Info système
-            "data_source": "cache" if day not in self.coordinator.tempo_data else "api",
+            "data_source": data_source,
         }

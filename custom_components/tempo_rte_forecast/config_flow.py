@@ -58,7 +58,7 @@ class TempoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="user",
                 data_schema=vol.Schema({}),
                 description_placeholders={
-                    "description": "Cette intégration récupère les couleurs Tempo depuis l'API RTE et crée une entité unique avec tous les états."
+                    "description": "Cette intégration récupère les couleurs Tempo, les prévisions et les prix de l'électricité."
                 },
             )
         
