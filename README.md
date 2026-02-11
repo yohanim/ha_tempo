@@ -198,4 +198,5 @@ Ce logiciel est distribué sous licence GNU General Public License v3.0. Voir le
 ---
 
 **Développé par Kevin Gossent**
-**Développé par l'intégration de Christophe Bansart [https://github.com/chrisbansart/ha_tempo](https://github.com/chrisbansart/ha_tempo)**
+
+**Inspiré par l'intégration de Christophe Bansart [https://github.com/chrisbansart/ha_tempo](https://github.com/chrisbansart/ha_tempo)**
