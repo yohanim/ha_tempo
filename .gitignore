@@ -46,4 +46,5 @@ custom_components/*/logo.png
 custom_components/*/icon@2x.png
 custom_components/*/logo@2x.png
 custom_components/*/dark_icon.png
+custom_components/*/dark_icon@2x.png
 custom_components/*/dark_logo.png
