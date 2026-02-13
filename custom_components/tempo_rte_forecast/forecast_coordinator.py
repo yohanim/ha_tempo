@@ -40,6 +40,7 @@ class ForecastCoordinator(DataUpdateCoordinator):
         self.hass = hass
         self.session = async_get_clientsession(hass)
         self.entry = entry
+        self.update_listener = entry.add_update_listener(self._options_update_callback)
         self.retry_delay = entry.options.get(CONF_FORECAST_RETRY_DELAY, FORECAST_RETRY_DELAY_MINUTES)
         self.service_type = entry.options.get(CONF_OPENDPE_SERVICE_TYPE, OPENDPE_SERVICE_LIGHT)
         self.tempo_data = {}
@@ -64,6 +65,13 @@ class ForecastCoordinator(DataUpdateCoordinator):
         _LOGGER.debug(
             "ForecastCoordinator initialisé : refresh quotidien programmé à 07:00 + intervalle 6h"
         )
+
+    async def _options_update_callback(self, hass: HomeAssistant, entry: ConfigEntry):
+        """Handle options update."""
+        _LOGGER.info("Configuration options for Tempo Forecast updated, requesting refresh.")
+        self.service_type = entry.options.get(CONF_OPENDPE_SERVICE_TYPE, OPENDPE_SERVICE_LIGHT)
+        self.retry_delay = entry.options.get(CONF_FORECAST_RETRY_DELAY, FORECAST_RETRY_DELAY_MINUTES)
+        await self.async_request_refresh()
 
     async def _scheduled_refresh(self, now: datetime) -> None:
         """Update at 07:00 every day."""
