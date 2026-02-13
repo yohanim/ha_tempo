@@ -8,15 +8,15 @@ from .const import (
     COLORS,
     )
 
-#   Forecast model (JSON from Open DPE)
+#   Forecast model Light (JSON from Open DPE)
 class ForecastDayLight(TypedDict, total=False):
     """Tempo forecast for a given day."""
     date: str
     couleur: str                                        # "bleu", "blanc", "rouge" (normalized to lowercase)
     probability: Optional[float]                        # 0.67 for example (for 67%)
 
-@dataclass
-class ForecastDay:
+#   Forecast model Light (JSON from Open DPE)
+class ForecastDay(TypedDict, total=False):
     """Tempo forecast for a given day."""
 
     date: date
@@ -29,7 +29,7 @@ class ForecastDay:
     probability_bleu: Optional[float]
     probability_blanc: Optional[float]
     probability_rouge: Optional[float]
-    source: str = "open_dpe"
+    # source: str = "open_dpe"
 
 @dataclass
 class ForecastSensor:
@@ -39,7 +39,7 @@ class ForecastSensor:
     short_date: str                                     # minimized localized date
     day: str                                            # minimized localized day of week
     color: str                                          # "bleu", "blanc", "rouge" (normalized to lowercase)
-    probability: Optional[float]                        # 0.67 for example (for 67%)
+    probability: Optional[float | str]                  # 0.67 for example (for 67%)
     source: str = "open_dpe"
 
 

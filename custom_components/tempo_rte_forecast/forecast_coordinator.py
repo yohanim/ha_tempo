@@ -9,13 +9,18 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_change, async_call_later
-from babel.dates import format_date
+from babel.dates import format_date, get_date_format
 
-from .sensor_types import ForecastSensor, ForecastDayLight
+from .sensor_types import ForecastSensor, ForecastDayLight, ForecastDay
 from .const import (
-    OPEN_DPE_URL,
+    OPEN_DPE_LIGHT_URL,
+    OPEN_DPE_FULL_URL,
     FORECAST_RETRY_DELAY_MINUTES,
     CONF_FORECAST_RETRY_DELAY,
+    CONF_OPENDPE_SERVICE_TYPE,
+    OPENDPE_SERVICE_LIGHT,
+    OPENDPE_SERVICE_FULL,
+    COLORS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,6 +41,7 @@ class ForecastCoordinator(DataUpdateCoordinator):
         self.session = async_get_clientsession(hass)
         self.entry = entry
         self.retry_delay = entry.options.get(CONF_FORECAST_RETRY_DELAY, FORECAST_RETRY_DELAY_MINUTES)
+        self.service_type = entry.options.get(CONF_OPENDPE_SERVICE_TYPE, OPENDPE_SERVICE_LIGHT)
         self.tempo_data = {}
         self._cached_data = {}  # Cache pour garder les dernières données valides
 
@@ -83,18 +89,55 @@ class ForecastCoordinator(DataUpdateCoordinator):
 
 
 #   Add formated day of week and short date to data
-def _format_all_dates(self: ForecastCoordinator, data: list[ForecastDayLight], lang: str) -> dict[str, ForecastSensor]:
+def _format_all_dates(self: ForecastCoordinator, data: list[ForecastDayLight] | list[ForecastDay], lang: str) -> dict[str, ForecastSensor]:
     # Cette fonction s'exécutera dans un thread séparé
     forecasts = {}
+    
+    # Détermine le format de date court sans l'année selon la locale
+    date_fmt = "dd/MM"
+    try:
+        pattern = get_date_format("short", locale=lang).pattern
+        # On enlève l'année (y) et les séparateurs inutiles pour ne garder que jour et mois
+        date_fmt = pattern.replace("y", "").replace("Y", "").strip("/.- ")
+        # Nettoyage des doubles séparateurs éventuels (ex: // ou ..)
+        for sep in ["/", ".", "-", " "]:
+            date_fmt = date_fmt.replace(sep + sep, sep)
+    except Exception:
+        pass
+
     for f_date in data:
         try:
+            # Determine color key based on service type
+            color_key = "couleur"
+            if self.service_type == OPENDPE_SERVICE_FULL:
+                color_key = "tempo_color"
+
+            prob = f_date.get("probability", None)
+            color = f_date.get(color_key, "").lower()
+
+            if prob is not None and prob != 1:
+                p_blue = f_date.get("probability_bleu") or 0
+                p_white = f_date.get("probability_blanc") or 0
+                p_red = f_date.get("probability_rouge") or 0
+
+                if p_blue or p_white or p_red:
+                    probs = []
+                    if p_blue > 0: probs.append((p_blue, COLORS["BLUE"]["emoji"]))
+                    if p_white > 0: probs.append((p_white, COLORS["WHITE"]["emoji"]))
+                    if p_red > 0: probs.append((p_red, COLORS["RED"]["emoji"]))
+
+                    probs.sort(key=lambda x: x[0])
+
+                    color = "".join(p[1] for p in probs)
+                    prob = "-".join(str(p[0]) for p in probs)
+
             forecast_date = date.fromisoformat(f_date["date"])
             sensor_item = ForecastSensor(
                 date        = forecast_date,
-                short_date  = format_date(forecast_date, "d LLL", locale=lang),
+                short_date  = format_date(forecast_date, date_fmt, locale=lang),
                 day         = format_date(forecast_date, "EEE", locale=lang),
-                color       = f_date.get("couleur", "").lower(),
-                probability = f_date.get("probability", None)
+                color       = color,
+                probability = prob
                 )
             forecasts[f_date["date"]] = sensor_item
             self._cached_data[f_date["date"]] = sensor_item
@@ -108,8 +151,15 @@ async def async_fetch_opendpe_forecast(self: ForecastCoordinator) -> dict[str, F
     """Fetch Tempo forecasts from the Open DPE JSON."""
     session = self.session
     hass = self.hass
+    
+    url = OPEN_DPE_LIGHT_URL
+    if self.service_type == OPENDPE_SERVICE_FULL:
+        url = OPEN_DPE_FULL_URL
+
+    _LOGGER.debug("Open DPE: Service '%s' actif (URL: %s)", self.service_type, url)
+
     try:
-        async with session.get(OPEN_DPE_URL, timeout=10) as response:
+        async with session.get(url, timeout=10) as response:
             if response.status != 200:
                 _LOGGER.error("Open-DPE: HTTP %s", response.status)
                 async_call_later(self.hass, timedelta(minutes=self.retry_delay), self.async_refresh)
@@ -118,7 +168,7 @@ async def async_fetch_opendpe_forecast(self: ForecastCoordinator) -> dict[str, F
             # Lire le contenu brut pour diagnostic
             response_text = await response.text()
             _LOGGER.debug("[API] Réponse brute (500 premiers chars): %s", response_text[:500])
-            data: list[ForecastDayLight] = json.loads(response_text)
+            data: list[ForecastDayLight] | list[ForecastDay] = json.loads(response_text)
 
             forecasts = await hass.async_add_executor_job(_format_all_dates, self, data, hass.config.language)
             _LOGGER.debug("Open DPE: forecasts traité brute (500 premiers chars): %s", forecasts)

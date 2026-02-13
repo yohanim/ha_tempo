@@ -92,6 +92,10 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
         """Retourne l'état actuel (couleur du jour actuel)."""
         day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
+        if day_data is None:
+            return None
+        if day_data.color not in COLORS:
+            return day_data.color
         if self.visual:
             return get_color_emoji(day_data.color)
         return get_color_name(day_data.color)

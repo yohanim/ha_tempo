@@ -32,6 +32,9 @@ from .const import (
     CONF_TEMPO_DAY_CHANGE_TIME,
     CONF_TEMPO_RETRY_DELAY,
     CONF_FORECAST_RETRY_DELAY,
+    CONF_OPENDPE_SERVICE_TYPE,
+    OPENDPE_SERVICE_LIGHT,
+    OPENDPE_SERVICE_FULL,
     CONF_RTE_TEMPO_COLOR_REFRESH_TIME,
     DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME,
     CONF_EDF_TEMPO_COLOR_REFRESH_TIME,
@@ -115,6 +118,18 @@ class OptionsFlowHandler(OptionsFlow):
                         max=30,
                         step=1,
                         mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Optional(
+                    CONF_OPENDPE_SERVICE_TYPE,
+                    default=current_options.get(CONF_OPENDPE_SERVICE_TYPE, OPENDPE_SERVICE_LIGHT)
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            {"label": "Light (JSON)", "value": OPENDPE_SERVICE_LIGHT},
+                            {"label": "Full (API)", "value": OPENDPE_SERVICE_FULL}
+                        ],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
                 vol.Optional(
