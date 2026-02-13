@@ -8,12 +8,14 @@ import logging
 from typing import Any, Optional
 
 from .tempo_coordinator import TempoDataCoordinator
+from .forecast_coordinator import ForecastCoordinator
 from .utils import get_tempo_date, get_color_code, get_color_name, get_color_emoji, get_color_name_en
 from .const import (
     DOMAIN,
     DEVICE_NAME,
     DEVICE_MANUFACTURER,
     DEVICE_MODEL,
+    COLORS,
     CONF_TEMPO_DAY_CHANGE_TIME,
     TEMPO_DAY_CHANGE_TIME,
 )
@@ -106,3 +108,58 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
             # Info système
             "data_source": data_source,
         }
+
+class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
+    """Sensor combinant RTE J+1 et OpenDPE si inconnu."""
+
+    def __init__(self, tempo_coordinator: TempoDataCoordinator, forecast_coordinator: ForecastCoordinator, entry: ConfigEntry) -> None:
+        """Initialisation."""
+        super().__init__(tempo_coordinator)
+        self.forecast_coordinator = forecast_coordinator
+        self.tempo_day_change_time_str = entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
+        
+        self._attr_name = "Tempo J+1 (Synthèse)"
+        self._attr_unique_id = f"{DOMAIN}_J1_combined"
+        self._attr_icon = "mdi:calendar-end"
+        self._attr_has_entity_name = True
+
+    async def async_added_to_hass(self) -> None:
+        """Register callbacks."""
+        await super().async_added_to_hass()
+        # Also listen to forecast updates
+        self.async_on_remove(
+            self.forecast_coordinator.async_add_listener(
+                self._handle_coordinator_update
+            )
+        )
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, "forecast")},
+            name=DEVICE_NAME,
+            manufacturer=DEVICE_MANUFACTURER,
+            model=DEVICE_MODEL,
+        )
+
+    @property
+    def native_value(self) -> str:
+        day = get_tempo_date(1, self.tempo_day_change_time_str)
+        
+        # RTE Data
+        rte_data = self.coordinator.get_data(day)
+        rte_emoji = get_color_emoji(rte_data)
+        
+        # Si RTE est inconnu, on regarde la prévision
+        if rte_emoji == COLORS["inconnu"]["emoji"]:
+            forecast_data = self.forecast_coordinator.get_data(day)
+            if forecast_data and forecast_data.color:
+                # Si la couleur est dans COLORS, on prend l'emoji, sinon c'est déjà un emoji (probabilités)
+                if forecast_data.color in COLORS:
+                    forecast_emoji = get_color_emoji(forecast_data.color)
+                else:
+                    forecast_emoji = forecast_data.color
+                
+                return f"{rte_emoji} {forecast_emoji}"
+        
+        return rte_emoji

@@ -25,7 +25,7 @@ from .const import CONF_CONTRACT
 
 # Importing coordinator and sensor for tempo validated data
 from .tempo_coordinator import TempoDataCoordinator
-from .tempo_sensor import TempoSensor
+from .tempo_sensor import TempoSensor, TempoNextDayCombinedSensor
 
 # Importing coordinator and sensors for forecast data
 from .forecast_coordinator import ForecastCoordinator
@@ -53,7 +53,7 @@ async def async_setup_entry(
     
     NUM_FORECAST_DAYS = 9  # J+1 à J+9
 
-    sensors = []
+    sensors = [TempoNextDayCombinedSensor(coordinator, forecast_coordinator, entry)]
     
     # Skip index 0 (J+1) because RTE provides the official J+1 sensor
     for index in range(0, NUM_FORECAST_DAYS):
