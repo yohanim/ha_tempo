@@ -130,14 +130,17 @@ def _format_all_dates(self: ForecastCoordinator, data: list[ForecastDayLight] | 
 
                 if p_blue or p_white or p_red:
                     probs = []
-                    if p_blue > 0: probs.append((p_blue, COLORS["BLUE"]["emoji"]))
-                    if p_white > 0: probs.append((p_white, COLORS["WHITE"]["emoji"]))
-                    if p_red > 0: probs.append((p_red, COLORS["RED"]["emoji"]))
+                    if p_blue > 0: probs.append((int(round(p_blue * 100)), COLORS["BLUE"]["emoji"]))
+                    if p_white > 0: probs.append((int(round(p_white * 100)), COLORS["WHITE"]["emoji"]))
+                    if p_red > 0: probs.append((int(round(p_red * 100)), COLORS["RED"]["emoji"]))
 
                     probs.sort(key=lambda x: x[0], reverse=True)
 
                     color = "".join(p[1] for p in probs)
                     prob = "|".join(str(p[0]) for p in probs)
+
+            if isinstance(prob, (int, float)):
+                prob = int(round(prob * 100))
 
             forecast_date = date.fromisoformat(f_date["date"])
             sensor_item = ForecastSensor(
