@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 from dataclasses import asdict
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -27,7 +27,6 @@ from .forecast_coordinator import ForecastCoordinator
 class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
     """OpenDPE forecast sensor (text or visual version)."""
 
-    _attr_device_class = SensorDeviceClass.ENUM
     _attr_has_entity_name = True
 
     def __init__(self, coordinator: ForecastCoordinator, index: int, visual: bool, entry: ConfigEntry):
@@ -41,23 +40,11 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
         if visual:
             self._attr_name = f"OpenDPE J{self.index} (visuel)"
             self._attr_unique_id = f"{DOMAIN}_forecast_opendpe_j{self.index}_emoji"
-            self._attr_options = [
-                COLORS["BLUE"]["emoji"],
-                COLORS["WHITE"]["emoji"],
-                COLORS["RED"]["emoji"],
-                COLORS["inconnu"]["emoji"],
-            ]
             self._attr_icon = "mdi:palette"
 
         else:
             self._attr_name = f"OpenDPE J{self.index}"
             self._attr_unique_id = f"{DOMAIN}_forecast_opendpe_j{self.index}"
-            self._attr_options = [
-                COLORS["BLUE"]["name"],
-                COLORS["WHITE"]["name"],
-                COLORS["RED"]["name"],
-                COLORS["inconnu"]["name"],
-            ]
             self._attr_icon = "mdi:calendar"
 
         # self._attr_native_value = index + 1
