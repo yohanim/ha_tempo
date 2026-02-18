@@ -137,7 +137,7 @@ def _format_all_dates(self: ForecastCoordinator, data: list[ForecastDayLight] | 
                     probs.sort(key=lambda x: x[0], reverse=True)
 
                     color = "".join(p[1] for p in probs)
-                    prob = " | ".join(str(p[0]) for p in probs)
+                    prob = " ".join(str(p[0]) for p in probs)
 
             if isinstance(prob, (int, float)):
                 prob = int(round(prob * 100))
