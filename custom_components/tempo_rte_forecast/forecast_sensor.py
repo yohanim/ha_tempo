@@ -7,7 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .utils import get_tempo_date, get_color_name, get_color_emoji
+from .utils import get_tempo_date, get_color_name, get_color_emoji, normalize_color
 from .const import (
     DOMAIN,
     DEVICE_MANUFACTURER,
@@ -63,12 +63,7 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
         if day_data is None:
             return None
             
-        color = day_data.color.lower()
-        if color in COLORS:
-            return color
-        
-        # If it's a special probability string, we return it as is
-        return color
+        return normalize_color(day_data.color)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -79,12 +74,13 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
             return {}
             
         attrs = asdict(day_data)
-        color_key = day_data.color.lower()
+        color_key = normalize_color(day_data.color)
+        
         if color_key in COLORS:
             attrs["color_name"] = COLORS[color_key]["name"]
             attrs["color_emoji"] = COLORS[color_key]["emoji"]
         else:
-            # For probability strings, we add it to emoji for those using it in Markdown
+            # Probability string case
             attrs["color_name"] = day_data.color
             attrs["color_emoji"] = day_data.color
             

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Tempo RTE Configuration",
-        "description": "This integration does not require an RTE account. Click Submit to create the sensors."
+        "description": "Integration for RTE Tempo colors, forecasts and electricity prices."
       }
     },
     "abort": {
@@ -46,7 +46,16 @@
   "entity": {
     "sensor": {
       "tempo_color": {
-        "name": "Tempo color",
+        "name": "Tempo color (J)",
+        "state": {
+          "blue": "Blue",
+          "white": "White",
+          "red": "Red",
+          "unknown": "Unknown"
+        }
+      },
+      "tempo_color_j1": {
+        "name": "Tempo color (J+1)",
         "state": {
           "blue": "Blue",
           "white": "White",
@@ -55,7 +64,7 @@
         }
       },
       "tempo_combined": {
-        "name": "Tempo forecast J+1 (Combined)",
+        "name": "Tempo J+1 (Synthesis)",
         "state": {
           "blue": "Blue",
           "white": "White",
@@ -64,7 +73,7 @@
         }
       },
       "tempo_forecast": {
-        "name": "Tempo forecast J+{day}",
+        "name": "Tempo forecast (J+{day})",
         "state": {
           "blue": "Blue",
           "white": "White",

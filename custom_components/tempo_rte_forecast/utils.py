@@ -64,38 +64,49 @@ def get_tempo_season(date_ref: date | datetime | None = None) -> str:
     
     return f"{start_year}-{start_year + 1}"
 
+def normalize_color(color: str | None) -> str:
+    """Normalize color name to English key."""
+    if not color:
+        return "unknown"
+    color = color.lower()
+    mapping = {
+        "bleu": "blue",
+        "blue": "blue",
+        "blanc": "white",
+        "white": "white",
+        "rouge": "red",
+        "red": "red",
+    }
+    return mapping.get(color, color)
+
 def get_color_code(data: str | None) -> int:
     """Retourne le code couleur pour une date donnée (avec cache)."""
-    if data:
-        data = data.lower()
-    if data and data in COLORS:
-        return COLORS[data]["code"]
+    color_key = normalize_color(data)
+    if color_key in COLORS:
+        return COLORS[color_key]["code"]
     
     return COLORS["unknown"]["code"]
 
 def get_color_name(data: str | None) -> str:
     """Retourne le nom de la couleur pour une date donnée (avec cache)."""
-    if data:
-        data = data.lower()
-    if data and data in COLORS:
-        return COLORS[data]["name"]
+    color_key = normalize_color(data)
+    if color_key in COLORS:
+        return COLORS[color_key]["name"]
     
     return COLORS["unknown"]["name"]
 
 def get_color_name_en(data: str | None) -> str:
     """Retourne le nom anglais de la couleur pour une date donnée (avec cache)."""
-    if data:
-        data = data.lower()
-    if data and data in COLORS:
-        return COLORS[data]["name_en"]
+    color_key = normalize_color(data)
+    if color_key in COLORS:
+        return COLORS[color_key]["name_en"]
     
     return COLORS["unknown"]["name_en"]
 
 def get_color_emoji(data: str | None) -> str:
     """Retourne l'emoji de la couleur pour une date donnée (avec cache)."""
-    if data:
-        data = data.lower()
-    if data and data in COLORS:
-        return COLORS[data]["emoji"]
+    color_key = normalize_color(data)
+    if color_key in COLORS:
+        return COLORS[color_key]["emoji"]
     
     return COLORS["unknown"]["emoji"]

@@ -9,7 +9,7 @@ from typing import Any, Optional
 
 from .tempo_coordinator import TempoDataCoordinator
 from .forecast_coordinator import ForecastCoordinator
-from .utils import get_tempo_date, get_color_code, get_color_name, get_color_emoji, get_color_name_en
+from .utils import get_tempo_date, get_color_code, get_color_name, get_color_emoji, get_color_name_en, normalize_color
 from .const import (
     DOMAIN,
     DEVICE_NAME,
@@ -23,12 +23,12 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 class TempoSensor(CoordinatorEntity, SensorEntity):
-    """Sensor principal représentant l'état Tempo."""
+    """Main sensor representing Tempo state."""
 
     _attr_has_entity_name = True
 
     def __init__(self, coordinator: TempoDataCoordinator, index: int, entry: ConfigEntry) -> None:
-        """Initialisation du sensor."""
+        """Initialize the sensor."""
         super().__init__(coordinator)
 
         self.index = index
@@ -36,9 +36,9 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = f"{entry.entry_id}_J{'' if (index == 0) else '+1'}"
         self._last_state = None
 
-        # J (index 0) utilise tempo_color (calendar-today)
-        # J+1 (index 1) utilise tempo_forecast (calendar)
-        self._attr_translation_key = "tempo_color" if index == 0 else "tempo_forecast"
+        # J (index 0) uses tempo_color (calendar-today)
+        # J+1 (index 1) uses tempo_color_j1 (calendar)
+        self._attr_translation_key = "tempo_color" if index == 0 else "tempo_color_j1"
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -53,11 +53,11 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
     @property
     def translation_placeholders(self) -> dict[str, Any]:
         """Return translation placeholders."""
-        return {"day": "" if self.index == 0 else " +1"}
+        return {"day": str(self.index)}
 
     @property
     def available(self) -> bool:
-        """Le sensor est disponible si on a au moins des données en cache."""
+        """Sensor is available if data is in cache."""
         if self.index == 1:
             return True
 
@@ -67,25 +67,25 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self) -> str:
-        """Retourne l'état actuel (couleur du jour actuel)."""
+        """Return the current state."""
         day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
         
-        state = day_data.lower() if day_data and day_data.lower() in COLORS else "unknown"
+        state = normalize_color(day_data)
 
         if state != self._last_state and self._last_state is not None:
-            _LOGGER.info("Changement d'état: %s → %s", self._last_state, state)
+            _LOGGER.info("State change: %s -> %s", self._last_state, state)
         
         self._last_state = state
         return state
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Attributs détaillés de l'entité."""
+        """Detailed entity attributes."""
         day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
         
-        color_key = day_data.lower() if day_data and day_data.lower() in COLORS else "unknown"
+        color_key = normalize_color(day_data)
         
         day_color_code = COLORS[color_key]["code"]
         day_color = COLORS[color_key]["name"]
@@ -112,13 +112,13 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         }
 
 class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
-    """Sensor combinant RTE J+1 et OpenDPE si inconnu."""
+    """Sensor combining RTE J+1 and OpenDPE if unknown."""
 
     _attr_has_entity_name = True
     _attr_translation_key = "tempo_combined"
 
     def __init__(self, tempo_coordinator: TempoDataCoordinator, forecast_coordinator: ForecastCoordinator, entry: ConfigEntry) -> None:
-        """Initialisation."""
+        """Initialization."""
         super().__init__(tempo_coordinator)
         self.forecast_coordinator = forecast_coordinator
         self.tempo_day_change_time_str = entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
@@ -155,16 +155,16 @@ class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
 
         # RTE Data
         rte_data = self.coordinator.get_data(day)
-        rte_key = rte_data.lower() if rte_data and rte_data.lower() in COLORS else "unknown"
+        rte_key = normalize_color(rte_data)
 
-        # Si RTE est connu, on renvoie juste la clé pour la traduction
+        # If RTE is known, return technical key
         if rte_key != "unknown":
             return rte_key
 
-        # Si RTE est inconnu, on construit la chaîne visuelle "❓ + prévision"
+        # If RTE is unknown, construct visual string
         forecast_data = self.forecast_coordinator.get_data(day)
         if forecast_data and forecast_data.color:
-            color_key = forecast_data.color.lower()
+            color_key = normalize_color(forecast_data.color)
             forecast_emoji = COLORS.get(color_key, {}).get("emoji", color_key)
             return f"{COLORS['unknown']['emoji']} {forecast_emoji}"
 
@@ -172,16 +172,16 @@ class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Attributs pour le capteur combiné."""
+        """Attributes for combined sensor."""
         day = get_tempo_date(1, self.tempo_day_change_time_str)
         rte_data = self.coordinator.get_data(day)
         forecast_data = self.forecast_coordinator.get_data(day)
 
-        rte_key = rte_data.lower() if rte_data and rte_data.lower() in COLORS else "unknown"
-        forecast_key = forecast_data.color.lower() if forecast_data else "unknown"
-        forecast_emoji = COLORS.get(forecast_key, {}).get("emoji", forecast_key) if forecast_data else "❓"
+        rte_key = normalize_color(rte_data)
+        forecast_key = normalize_color(forecast_data.color) if forecast_data else "unknown"
+        forecast_emoji = COLORS.get(forecast_key, {}).get("emoji", forecast_key) if forecast_data else "unknown"
 
-        # On prépare un objet riche avec les deux sources
+        # Prepare rich attributes
         return {
             "date": day,
             "rte_status": COLORS[rte_key]["name"],

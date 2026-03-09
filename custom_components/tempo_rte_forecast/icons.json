@@ -9,6 +9,15 @@
         "unknown": "mdi:calendar-question"
       }
     },
+    "tempo_color_j1": {
+      "default": "mdi:calendar-end",
+      "state": {
+        "blue": "mdi:calendar-check",
+        "white": "mdi:calendar-check-outline",
+        "red": "mdi:calendar-alert",
+        "unknown": "mdi:calendar-question"
+      }
+    },
     "tempo_combined": {
       "default": "mdi:calendar-end",
       "state": {
@@ -19,7 +28,7 @@
       }
     },
     "tempo_forecast": {
-      "default": "mdi:calendar",
+      "default": "mdi:calendar-week",
       "state": {
         "blue": "mdi:calendar-check",
         "white": "mdi:calendar-check-outline",

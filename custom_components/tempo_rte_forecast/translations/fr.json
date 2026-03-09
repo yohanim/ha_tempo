@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Configuration Tempo RTE",
-        "description": "Cette intégration ne nécessite pas de compte RTE. Cliquez sur Valider pour créer les capteurs."
+        "description": "Integration pour les couleurs RTE Tempo, les previsions et les prix."
       }
     },
     "abort": {
@@ -46,7 +46,16 @@
   "entity": {
     "sensor": {
       "tempo_color": {
-        "name": "Couleur Tempo",
+        "name": "Couleur Tempo (J)",
+        "state": {
+          "blue": "Bleu",
+          "white": "Blanc",
+          "red": "Rouge",
+          "unknown": "Inconnu"
+        }
+      },
+      "tempo_color_j1": {
+        "name": "Couleur Tempo (J+1)",
         "state": {
           "blue": "Bleu",
           "white": "Blanc",
@@ -55,7 +64,7 @@
         }
       },
       "tempo_combined": {
-        "name": "Prévision Tempo J+1 (Synthèse)",
+        "name": "Tempo J+1 (Synthèse)",
         "state": {
           "blue": "Bleu",
           "white": "Blanc",
@@ -64,7 +73,7 @@
         }
       },
       "tempo_forecast": {
-        "name": "Prévision Tempo J+{day}",
+        "name": "Prévision Tempo (J+{day})",
         "state": {
           "blue": "Bleu",
           "white": "Blanc",
