@@ -11,6 +11,13 @@ COLORS = {
     "red": {"code": 3, "name": "Rouge", "name_en": "red","emoji":"🔴"},
     "unknown": {"code": 0, "name": "Inconnu", "name_en": "unknown", "emoji":"❓"},
 }
+
+ICON_COLORS = {
+    "blue": "blue",
+    "white": "silver",
+    "red": "red",
+    "unknown": "yellow",
+}
 # SENSOR_COLOR_BLUE_EMOJI = COLORS["BLUE"]["emoji"]
 # SENSOR_COLOR_WHITE_EMOJI = COLORS["WHITE"]["emoji"]
 # SENSOR_COLOR_RED_EMOJI = COLORS["RED"]["emoji"]

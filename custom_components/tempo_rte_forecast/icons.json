@@ -2,40 +2,16 @@
   "entity": {
     "sensor": {
       "tempo_color": {
-        "default": "mdi:calendar-today",
-        "state": {
-          "blue": "mdi:calendar-check",
-          "white": "mdi:calendar-check-outline",
-          "red": "mdi:calendar-alert",
-          "unknown": "mdi:calendar-question"
-        }
+        "default": "mdi:calendar-today"
       },
       "tempo_color_j1": {
-      "default": "mdi:calendar-end",
-        "state": {
-          "blue": "mdi:calendar-check",
-          "white": "mdi:calendar-check-outline",
-          "red": "mdi:calendar-alert",
-          "unknown": "mdi:calendar-question"
-        }
+        "default": "mdi:calendar-end"
       },
       "tempo_combined": {
-        "default": "mdi:calendar-end",
-        "state": {
-          "blue": "mdi:calendar-check",
-          "white": "mdi:calendar-check-outline",
-          "red": "mdi:calendar-alert",
-          "unknown": "mdi:calendar-question"
-        }
+        "default": "mdi:calendar-end"
       },
       "tempo_forecast": {
-      "default": "mdi:calendar-week",
-        "state": {
-          "blue": "mdi:calendar-check",
-          "white": "mdi:calendar-check-outline",
-          "red": "mdi:calendar-alert",
-          "unknown": "mdi:calendar-question"
-        }
+        "default": "mdi:calendar-week"
       },
       "price": {
         "default": "mdi:currency-eur"

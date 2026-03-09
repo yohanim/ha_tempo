@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass, SensorDeviceClass
+from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CURRENCY_EURO, ATTR_ATTRIBUTION
 from homeassistant.helpers.entity import DeviceInfo
@@ -19,7 +19,6 @@ ATTRIBUTION = "Prix basés sur les options de l'intégration"
 class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
     """Sensor for the current electricity price."""
 
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_device_class = SensorDeviceClass.MONETARY
     _attr_native_unit_of_measurement = f"{CURRENCY_EURO}/kWh"
     _attr_has_entity_name = True
@@ -71,7 +70,6 @@ class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
 class SpecificPriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
     """Sensor for a specific price component (e.g. 'Tempo Red HP')."""
 
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_device_class = SensorDeviceClass.MONETARY
     _attr_native_unit_of_measurement = f"{CURRENCY_EURO}/kWh"
     _attr_has_entity_name = True

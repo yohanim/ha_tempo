@@ -16,6 +16,7 @@ from .const import (
     DEVICE_MANUFACTURER,
     DEVICE_MODEL,
     COLORS,
+    ICON_COLORS,
     CONF_TEMPO_DAY_CHANGE_TIME,
     TEMPO_DAY_CHANGE_TIME,
 )
@@ -86,7 +87,8 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         day_data = self.coordinator.get_data(day)
         
         color_key = normalize_color(day_data)
-        
+        icon_color = ICON_COLORS.get(color_key, ICON_COLORS["unknown"])
+
         day_color_code = COLORS[color_key]["code"]
         day_color = COLORS[color_key]["name"]
         day_color_en = COLORS[color_key]["name_en"]
@@ -108,6 +110,7 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
             "is_blue": color_key == "blue",
             "is_white": color_key == "white",
             "is_red": color_key == "red",
+            "icon_color": icon_color,
             "data_source": data_source,
         }
 
@@ -179,6 +182,11 @@ class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
 
         rte_key = normalize_color(rte_data)
         forecast_key = normalize_color(forecast_data.color) if forecast_data else "unknown"
+        
+        # Color logic for icon: RTE first, then Forecast
+        active_key = rte_key if rte_key != "unknown" else forecast_key
+        icon_color = ICON_COLORS.get(active_key, ICON_COLORS["unknown"])
+
         forecast_emoji = COLORS.get(forecast_key, {}).get("emoji", forecast_key) if forecast_data else "unknown"
 
         # Prepare rich attributes
@@ -189,5 +197,6 @@ class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
             "forecast_status": COLORS.get(forecast_key, {}).get("name", forecast_key),
             "forecast_emoji": forecast_emoji,
             "active_source": "RTE" if rte_key != "unknown" else "OpenDPE",
-            "color_emoji": COLORS[rte_key]["emoji"] if rte_key != "unknown" else f"{COLORS['unknown']['emoji']} {forecast_emoji}"
+            "color_emoji": COLORS[rte_key]["emoji"] if rte_key != "unknown" else f"{COLORS['unknown']['emoji']} {forecast_emoji}",
+            "icon_color": icon_color
         }

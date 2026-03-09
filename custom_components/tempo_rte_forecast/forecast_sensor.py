@@ -13,6 +13,7 @@ from .const import (
     DEVICE_MANUFACTURER,
     DEVICE_MODEL,
     COLORS,
+    ICON_COLORS,
     DEVICE_NAME,
     CONF_TEMPO_DAY_CHANGE_TIME,
     TEMPO_DAY_CHANGE_TIME,
@@ -50,14 +51,14 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        """Le sensor est disponible si on a au moins des données en cache."""
+        """Sensor is available if data is in cache."""
         day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
         return day_data != None
 
     @property
     def native_value(self) -> str | None:
-        """Retourne l'état actuel (couleur du jour actuel)."""
+        """Return current state."""
         day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
         if day_data is None:
@@ -67,7 +68,7 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Attributs détaillés de l'entité."""
+        """Detailed entity attributes."""
         day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
         if day_data is None:
@@ -75,7 +76,8 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
             
         attrs = asdict(day_data)
         color_key = normalize_color(day_data.color)
-        
+        attrs["icon_color"] = ICON_COLORS.get(color_key, ICON_COLORS["unknown"])
+
         if color_key in COLORS:
             attrs["color_name"] = COLORS[color_key]["name"]
             attrs["color_emoji"] = COLORS[color_key]["emoji"]
