@@ -37,18 +37,18 @@ from .const import (
 
 
 class TempoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Config flow pour Tempo."""
+    """Config flow for Tempo."""
 
     VERSION = 1
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
-        """Étape initiale de configuration."""
+        """Initial setup step."""
         if user_input is None:
             return self.async_show_form(
                 step_id="user",
                 data_schema=vol.Schema({}),
                 description_placeholders={
-                    "description": "Cette intégration récupère les couleurs Tempo, les prévisions et les prix de l'électricité."
+                    "description": "Integration for RTE Tempo colors, forecasts and electricity prices."
                 },
             )
         
