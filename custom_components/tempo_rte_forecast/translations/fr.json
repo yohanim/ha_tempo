@@ -1,0 +1,83 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuration Tempo RTE",
+        "description": "Cette intégration ne nécessite pas de compte RTE. Cliquez sur Valider pour créer les capteurs."
+      }
+    },
+    "abort": {
+      "already_configured": "L'appareil est déjà configuré"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "contract": "Type de contrat",
+          "subscribed_power": "Puissance souscrite (kVA)",
+          "offpeak_ranges": "Plages d'heures creuses (ex: 22:00-06:00)",
+          "price_update_interval": "Intervalle de mise à jour des prix (jours)",
+          "tempo_day_change_time": "Heure de changement de jour Tempo (défaut: 06:00:00)",
+          "rte_tempo_color_refresh_time": "Heure de récupération API RTE (défaut: 07:05:00)",
+          "edf_tempo_color_refresh_time": "Heure de récupération API EDF (défaut: 11:05:00)",
+          "tempo_retry_delay_minutes": "Délai de réessai API RTE (minutes)",
+          "forecast_retry_delay_minutes": "Délai de réessai API Prévisions (minutes)",
+          "opendpe_service_type": "Type de service OpenDPE"
+        }
+      }
+    }
+  },
+  "selector": {
+    "contract": {
+      "options": {
+        "Base": "Base",
+        "Heures Creuses": "Heures Pleines / Heures Creuses",
+        "Tempo": "Tempo"
+      }
+    },
+    "opendpe_service_type": {
+      "options": {
+        "light": "Light (JSON)",
+        "full": "Full (API)"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "tempo_color": {
+        "name": "Couleur Tempo",
+        "state": {
+          "blue": "Bleu",
+          "white": "Blanc",
+          "red": "Rouge",
+          "unknown": "Inconnu"
+        }
+      },
+      "tempo_combined": {
+        "name": "Prévision Tempo J+1 (Synthèse)",
+        "state": {
+          "blue": "Bleu",
+          "white": "Blanc",
+          "red": "Rouge",
+          "unknown": "Inconnu"
+        }
+      },
+      "tempo_forecast": {
+        "name": "Prévision Tempo J+{day}",
+        "state": {
+          "blue": "Bleu",
+          "white": "Blanc",
+          "red": "Rouge",
+          "unknown": "Inconnu"
+        }
+      },
+      "price": {
+        "name": "Prix actuel"
+      },
+      "specific_price": {
+        "name": "Prix {period} {color}"
+      }
+    }
+  }
+}

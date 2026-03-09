@@ -93,7 +93,7 @@ class OptionsFlowHandler(OptionsFlow):
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=["Base", "Heures Creuses", "Tempo"],
-                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="contract",
                     )
                 ),
                 vol.Optional(
@@ -125,11 +125,8 @@ class OptionsFlowHandler(OptionsFlow):
                     default=current_options.get(CONF_OPENDPE_SERVICE_TYPE, OPENDPE_SERVICE_LIGHT)
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=[
-                            {"label": "Light (JSON)", "value": OPENDPE_SERVICE_LIGHT},
-                            {"label": "Full (API)", "value": OPENDPE_SERVICE_FULL}
-                        ],
-                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        options=[OPENDPE_SERVICE_LIGHT, OPENDPE_SERVICE_FULL],
+                        translation_key="opendpe_service_type",
                     )
                 ),
                 vol.Optional(

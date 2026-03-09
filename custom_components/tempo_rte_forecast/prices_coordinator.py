@@ -32,15 +32,15 @@ from .utils import get_tempo_date
 
 _LOGGER = logging.getLogger(__name__)
 
-# Fallback prices in case of API failure
+# Fallback prices in case of API failure (updated with lowercase keys)
 FALLBACK_PRICES = {
     "Base": {"HP": 0.2516},
     "Heures Creuses": {"HP": 0.27, "HC": 0.2068},
     "Tempo": {
-        "BLUE": {"HP": 0.1749, "HC": 0.1486},
-        "WHITE": {"HP": 0.363, "HC": 0.1894},
-        "RED": {"HP": 0.7562, "HC": 0.272},
-        "inconnu": {"HP": 0, "HC": 0},
+        "blue": {"HP": 0.1749, "HC": 0.1486},
+        "white": {"HP": 0.363, "HC": 0.1894},
+        "red": {"HP": 0.7562, "HC": 0.272},
+        "unknown": {"HP": 0, "HC": 0},
     },
 }
 
@@ -313,14 +313,14 @@ class PriceCoordinator(DataUpdateCoordinator):
                 continue
 
             try:
-                prices = {"BLUE": {}, "WHITE": {}, "RED": {}}
+                prices = {"blue": {}, "white": {}, "red": {}}
                 
-                prices["BLUE"]["HC"] = float(row["PART_VARIABLE_HCBleu_TTC"].replace(',', '.'))
-                prices["BLUE"]["HP"] = float(row["PART_VARIABLE_HPBleu_TTC"].replace(',', '.'))
-                prices["WHITE"]["HC"] = float(row["PART_VARIABLE_HCBlanc_TTC"].replace(',', '.'))
-                prices["WHITE"]["HP"] = float(row["PART_VARIABLE_HPBlanc_TTC"].replace(',', '.'))
-                prices["RED"]["HC"] = float(row["PART_VARIABLE_HCRouge_TTC"].replace(',', '.'))
-                prices["RED"]["HP"] = float(row["PART_VARIABLE_HPRouge_TTC"].replace(',', '.'))
+                prices["blue"]["HC"] = float(row["PART_VARIABLE_HCBleu_TTC"].replace(',', '.'))
+                prices["blue"]["HP"] = float(row["PART_VARIABLE_HPBleu_TTC"].replace(',', '.'))
+                prices["white"]["HC"] = float(row["PART_VARIABLE_HCBlanc_TTC"].replace(',', '.'))
+                prices["white"]["HP"] = float(row["PART_VARIABLE_HPBlanc_TTC"].replace(',', '.'))
+                prices["red"]["HC"] = float(row["PART_VARIABLE_HCRouge_TTC"].replace(',', '.'))
+                prices["red"]["HP"] = float(row["PART_VARIABLE_HPRouge_TTC"].replace(',', '.'))
                 
                 _LOGGER.debug("Found Tempo prices for %s kVA: %s", self._subscribed_power, prices)
                 return prices
@@ -343,7 +343,7 @@ class PriceCoordinator(DataUpdateCoordinator):
             current_period = "HC" if is_hc else "HP"
 
         price = 0.0
-        tempo_color = "inconnu"
+        tempo_color = "unknown"
 
         if self._contract == "Base":
             price = self._prices.get("Base", {}).get("HP", 0.0)
@@ -352,11 +352,8 @@ class PriceCoordinator(DataUpdateCoordinator):
         elif self._contract == "Tempo":
             tempo_day_change_time_str = self.tempo_coordinator.tempo_day_change_time_str
             today_date_str = get_tempo_date(0, tempo_day_change_time_str)
-            tempo_color_raw = self.tempo_coordinator.get_data(today_date_str) or "inconnu"
-            
-            if tempo_color_raw in ("bleu", "BLUE"): tempo_color = "BLUE"
-            elif tempo_color_raw in ("blanc", "WHITE"): tempo_color = "WHITE"
-            elif tempo_color_raw in ("rouge", "RED"): tempo_color = "RED"
+            tempo_color = self.tempo_coordinator.get_data(today_date_str) or "unknown"
+            tempo_color = tempo_color.lower()
 
             price = self._prices.get("Tempo", {}).get(tempo_color, {}).get(current_period, 0.0)
 

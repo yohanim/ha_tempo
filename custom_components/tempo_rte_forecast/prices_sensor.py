@@ -3,13 +3,13 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor import SensorEntity, SensorStateClass, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CURRENCY_EURO, ATTR_ATTRIBUTION
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, DEVICE_NAME, DEVICE_MANUFACTURER, DEVICE_MODEL
+from .const import DOMAIN, DEVICE_NAME, DEVICE_MANUFACTURER, DEVICE_MODEL, COLORS
 from .prices_coordinator import PriceCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,22 +20,22 @@ class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
     """Sensor for the current electricity price."""
 
     _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_device_class = SensorDeviceClass.MONETARY
     _attr_native_unit_of_measurement = f"{CURRENCY_EURO}/kWh"
-    _attr_icon = "mdi:currency-eur"
     _attr_has_entity_name = True
+    _attr_translation_key = "price"
 
     def __init__(self, coordinator: PriceCoordinator, entry: ConfigEntry):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.entry = entry
-        self._attr_unique_id = f"{DOMAIN}_current_price"
-        self._attr_name = "Prix actuel"
+        self._attr_unique_id = f"{entry.entry_id}_current_price"
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return device info."""
         return DeviceInfo(
-            identifiers={(DOMAIN, "forecast")}, # Using same device as others
+            identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
             name=DEVICE_NAME,
             manufacturer=DEVICE_MANUFACTURER,
             model=DEVICE_MODEL,
@@ -72,41 +72,38 @@ class SpecificPriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
     """Sensor for a specific price component (e.g. 'Tempo Red HP')."""
 
     _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_device_class = SensorDeviceClass.MONETARY
     _attr_native_unit_of_measurement = f"{CURRENCY_EURO}/kWh"
-    _attr_icon = "mdi:currency-eur"
     _attr_has_entity_name = True
+    _attr_translation_key = "specific_price"
 
     def __init__(self, coordinator: PriceCoordinator, entry: ConfigEntry, key: str, color: str | None = None):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.entry = entry
         self._key = key  # "HP" or "HC"
-        self._color = color  # "BLUE", "WHITE", "RED" or None
+        self._color = color.lower() if color else None  # "blue", "white", "red" or None
 
-        # Construct unique ID and Name based on contract and variant
-        contract_name = coordinator.data.get("contract", "unknown")
-        contract_slug = contract_name.lower().replace(" ", "_")
-        
-        slug_parts = [contract_slug]
-        name_parts = ["Prix"]
+        slug_parts = [key.lower()]
+        if self._color:
+            slug_parts.append(self._color)
 
-        if color:
-            color_map = {"BLUE": "Bleu", "WHITE": "Blanc", "RED": "Rouge"}
-            color_fr = color_map.get(color, color)
-            slug_parts.append(color.lower())
-            name_parts.append(color_fr)
-        
-        slug_parts.append(key.lower())
-        name_parts.append(key)
+        self._attr_unique_id = f"{entry.entry_id}_{'_'.join(slug_parts)}"
 
-        self._attr_unique_id = f"{DOMAIN}_{'_'.join(slug_parts)}"
-        self._attr_name = " ".join(name_parts)
+    @property
+    def translation_placeholders(self) -> dict[str, Any]:
+        """Return translation placeholders."""
+        color_fr = COLORS.get(self._color, {}).get("name", self._color) if self._color else ""
+        return {
+            "period": self._key,
+            "color": color_fr
+        }
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return device info."""
         return DeviceInfo(
-            identifiers={(DOMAIN, "forecast")},
+            identifiers={(DOMAIN, self.coordinator.config_entry.entry_id)},
             name=DEVICE_NAME,
             manufacturer=DEVICE_MANUFACTURER,
             model=DEVICE_MODEL,
@@ -121,7 +118,7 @@ class SpecificPriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
         prices = self.coordinator.data.get("contract_prices", {})
         
         if self._color:
-            # Tempo structure: {"BLUE": {"HP": x, "HC": y}, ...}
+            # Tempo structure: {"blue": {"HP": x, "HC": y}, ...}
             return prices.get(self._color, {}).get(self._key)
         
         # Base/HC structure: {"HP": x, "HC": y}
@@ -144,7 +141,7 @@ class SpecificPriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
 
         if self._color:
             # Tempo
-            current_color = data.get("tempo_color")
+            current_color = data.get("tempo_color", "").lower()
             if current_color == self._color and current_period == self._key:
                 attributes["active"] = True
         else:

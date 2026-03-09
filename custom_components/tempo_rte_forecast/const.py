@@ -6,14 +6,11 @@ RTE_API_FULL_URL = "https://www.services-rte.com/cms/open_data/v1/tempo?season={
 OPEN_DPE_LIGHT_URL = "https://open-dpe.fr/assets/tempo_days_lite.json"
 OPEN_DPE_FULL_URL = "https://open-dpe.fr/assets/tempo_days.json"
 COLORS = {
-    "BLUE": {"code": 1, "name": "Bleu", "name_en": "blue", "emoji":"🔵"},
-    "WHITE": {"code": 2, "name": "Blanc", "name_en": "white","emoji":"⚪"},
-    "RED": {"code": 3, "name": "Rouge", "name_en": "red","emoji":"🔴"},
-    "inconnu": {"code": 0, "name": "Inconnu", "name_en": "unknown", "emoji":"❓"},
+    "blue": {"code": 1, "name": "Bleu", "name_en": "blue", "emoji":"🔵"},
+    "white": {"code": 2, "name": "Blanc", "name_en": "white","emoji":"⚪"},
+    "red": {"code": 3, "name": "Rouge", "name_en": "red","emoji":"🔴"},
+    "unknown": {"code": 0, "name": "Inconnu", "name_en": "unknown", "emoji":"❓"},
 }
-COLORS["bleu"] = COLORS["BLUE"]
-COLORS["blanc"] = COLORS["WHITE"]
-COLORS["rouge"] = COLORS["RED"]
 # SENSOR_COLOR_BLUE_EMOJI = COLORS["BLUE"]["emoji"]
 # SENSOR_COLOR_WHITE_EMOJI = COLORS["WHITE"]["emoji"]
 # SENSOR_COLOR_RED_EMOJI = COLORS["RED"]["emoji"]

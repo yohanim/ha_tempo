@@ -2,28 +2,81 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configuration Tempo RTE",
-        "description": "Cette intégration ne nécessite pas de compte RTE. Cliquez sur Valider pour créer les capteurs."
+        "title": "Tempo RTE Configuration",
+        "description": "This integration does not require an RTE account. Click Submit to create the sensors."
       }
     },
     "abort": {
-      "already_configured": "L'appareil est déjà configuré"
+      "already_configured": "Device is already configured"
     }
   },
   "options": {
     "step": {
       "init": {
         "data": {
-          "contract": "Type de contrat",
-          "subscribed_power": "Puissance souscrite (kVA)",
-          "offpeak_ranges": "Plages d'heures creuses (ex: 01:30-07:30,12:30-14:30)",
-          "price_update_interval": "Intervalle de mise à jour des prix (jours, défaut: 1)",
-          "tempo_day_change_time": "Heure de changement de jour Tempo (défaut: 06:00:00)",
-          "rte_tempo_color_refresh_time": "Heure de récupération API RTE (défaut: 07:05:00)",
-          "edf_tempo_color_refresh_time": "Heure de récupération API EDF (défaut: 11:05:00)",
-          "tempo_retry_delay_minutes": "Délai de réessai API RTE (minutes)",
-          "forecast_retry_delay_minutes": "Délai de réessai API Prévisions (minutes)"
+          "contract": "Contract type",
+          "subscribed_power": "Subscribed power (kVA)",
+          "offpeak_ranges": "Off-peak ranges (e.g., 22:00-06:00)",
+          "price_update_interval": "Price update interval (days)",
+          "tempo_day_change_time": "Tempo day change time (default: 06:00:00)",
+          "rte_tempo_color_refresh_time": "RTE API refresh time (default: 07:05:00)",
+          "edf_tempo_color_refresh_time": "EDF API refresh time (default: 11:05:00)",
+          "tempo_retry_delay_minutes": "RTE API retry delay (minutes)",
+          "forecast_retry_delay_minutes": "Forecast API retry delay (minutes)",
+          "opendpe_service_type": "OpenDPE service type"
         }
+      }
+    }
+  },
+  "selector": {
+    "contract": {
+      "options": {
+        "Base": "Base",
+        "Heures Creuses": "Off-peak / Peak",
+        "Tempo": "Tempo"
+      }
+    },
+    "opendpe_service_type": {
+      "options": {
+        "light": "Light (JSON)",
+        "full": "Full (API)"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "tempo_color": {
+        "name": "Tempo color",
+        "state": {
+          "blue": "Blue",
+          "white": "White",
+          "red": "Red",
+          "unknown": "Unknown"
+        }
+      },
+      "tempo_combined": {
+        "name": "Tempo forecast J+1 (Combined)",
+        "state": {
+          "blue": "Blue",
+          "white": "White",
+          "red": "Red",
+          "unknown": "Unknown"
+        }
+      },
+      "tempo_forecast": {
+        "name": "Tempo forecast J+{day}",
+        "state": {
+          "blue": "Blue",
+          "white": "White",
+          "red": "Red",
+          "unknown": "Unknown"
+        }
+      },
+      "price": {
+        "name": "Current price"
+      },
+      "specific_price": {
+        "name": "Price {period} {color}"
       }
     }
   }

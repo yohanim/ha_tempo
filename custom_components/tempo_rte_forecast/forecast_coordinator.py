@@ -130,9 +130,9 @@ def _format_all_dates(self: ForecastCoordinator, data: list[ForecastDayLight] | 
 
                 if p_blue or p_white or p_red:
                     probs = []
-                    if p_blue > 0: probs.append((int(round(p_blue * 100)), COLORS["BLUE"]["emoji"]))
-                    if p_white > 0: probs.append((int(round(p_white * 100)), COLORS["WHITE"]["emoji"]))
-                    if p_red > 0: probs.append((int(round(p_red * 100)), COLORS["RED"]["emoji"]))
+                    if p_blue > 0: probs.append((int(round(p_blue * 100)), COLORS["blue"]["emoji"]))
+                    if p_white > 0: probs.append((int(round(p_white * 100)), COLORS["white"]["emoji"]))
+                    if p_red > 0: probs.append((int(round(p_red * 100)), COLORS["red"]["emoji"]))
 
                     probs.sort(key=lambda x: x[0], reverse=True)
 

@@ -19,51 +19,34 @@ from .const import (
 )
 
 from .forecast_coordinator import ForecastCoordinator
-# from .sensor_types import ForecastSensor
-
-# ---------------- Forecast Sensor ----------------------
-
 
 class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
-    """OpenDPE forecast sensor (text or visual version)."""
+    """OpenDPE forecast sensor."""
 
     _attr_has_entity_name = True
+    _attr_translation_key = "tempo_forecast"
 
-    def __init__(self, coordinator: ForecastCoordinator, index: int, visual: bool, entry: ConfigEntry):
+    def __init__(self, coordinator: ForecastCoordinator, index: int, entry: ConfigEntry):
         super().__init__(coordinator)
 
         self.index = index + 1
-        self.visual = visual
         self.tempo_day_change_time_str = entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
-
-        # ----- Sensor naming and options -----
-        if visual:
-            self._attr_name = f"OpenDPE J{self.index} (visuel)"
-            self._attr_unique_id = f"{DOMAIN}_forecast_opendpe_j{self.index}_emoji"
-            self._attr_icon = "mdi:palette"
-
-        else:
-            self._attr_name = f"OpenDPE J{self.index}"
-            self._attr_unique_id = f"{DOMAIN}_forecast_opendpe_j{self.index}"
-            self._attr_icon = "mdi:calendar"
-
-        # self._attr_native_value = index + 1
-        self._attr_native_value: Optional[str] = None
-        self._attr_extra_state_attributes = {}
-
-    # ---------------- Device Info ----------------------
+        self._attr_unique_id = f"{entry.entry_id}_forecast_opendpe_j{self.index}"
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return device info shared by all forecast sensors."""
         return DeviceInfo(
-            identifiers={(DOMAIN, "forecast")},
+            identifiers={(DOMAIN, self.coordinator.entry.entry_id)},
             name=DEVICE_NAME,
             manufacturer=DEVICE_MANUFACTURER,
             model=DEVICE_MODEL,
         )
 
-    # ---------------- Availability ----------------------
+    @property
+    def translation_placeholders(self) -> dict[str, Any]:
+        """Return translation placeholders."""
+        return {"day": str(self.index)}
 
     @property
     def available(self) -> bool:
@@ -72,8 +55,6 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
         day_data = self.coordinator.get_data(day)
         return day_data != None
 
-    # ---------------- Native Value ----------------------
-
     @property
     def native_value(self) -> str | None:
         """Retourne l'état actuel (couleur du jour actuel)."""
@@ -81,15 +62,30 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
         day_data = self.coordinator.get_data(day)
         if day_data is None:
             return None
-        if day_data.color not in COLORS:
-            return day_data.color
-        if self.visual:
-            return get_color_emoji(day_data.color)
-        return get_color_name(day_data.color)
+            
+        color = day_data.color.lower()
+        if color in COLORS:
+            return color
+        
+        # If it's a special probability string, we return it as is
+        return color
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Attributs détaillés de l'entité."""
         day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
-        return asdict(day_data)
+        if day_data is None:
+            return {}
+            
+        attrs = asdict(day_data)
+        color_key = day_data.color.lower()
+        if color_key in COLORS:
+            attrs["color_name"] = COLORS[color_key]["name"]
+            attrs["color_emoji"] = COLORS[color_key]["emoji"]
+        else:
+            # For probability strings, we add it to emoji for those using it in Markdown
+            attrs["color_name"] = day_data.color
+            attrs["color_emoji"] = day_data.color
+            
+        return attrs

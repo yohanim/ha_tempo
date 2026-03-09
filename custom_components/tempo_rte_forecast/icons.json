@@ -1,0 +1,37 @@
+{
+  "sensor": {
+    "tempo_color": {
+      "default": "mdi:calendar-today",
+      "state": {
+        "blue": "mdi:calendar-check",
+        "white": "mdi:calendar-check-outline",
+        "red": "mdi:calendar-alert",
+        "unknown": "mdi:calendar-question"
+      }
+    },
+    "tempo_combined": {
+      "default": "mdi:calendar-end",
+      "state": {
+        "blue": "mdi:calendar-check",
+        "white": "mdi:calendar-check-outline",
+        "red": "mdi:calendar-alert",
+        "unknown": "mdi:calendar-question"
+      }
+    },
+    "tempo_forecast": {
+      "default": "mdi:calendar",
+      "state": {
+        "blue": "mdi:calendar-check",
+        "white": "mdi:calendar-check-outline",
+        "red": "mdi:calendar-alert",
+        "unknown": "mdi:calendar-question"
+      }
+    },
+    "price": {
+      "default": "mdi:currency-eur"
+    },
+    "specific_price": {
+      "default": "mdi:currency-eur"
+    }
+  }
+}

@@ -125,18 +125,21 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             _LOGGER.warning("[Validation] Données vides reçues de l'API (dict vide ou None)")
             return False
 
+        # Normalise les données en minuscules
+        normalized_data = {d: c.lower() if c else None for d, c in new_data.items()}
+
         today = get_tempo_date(0, self.tempo_day_change_time_str)
         tomorrow = get_tempo_date(1, self.tempo_day_change_time_str)
 
         _LOGGER.debug("[Validation] Date J calculée: %s, Date J+1: %s", today, tomorrow)
-        _LOGGER.debug("[Validation] Nombre total d'entrées reçues: %s", len(new_data))
+        _LOGGER.debug("[Validation] Nombre total d'entrées reçues: %s", len(normalized_data))
 
         # Vérifie que les données essentielles sont présentes
-        today_color = new_data.get(today)
-        tomorrow_color = new_data.get(tomorrow)
+        today_color = normalized_data.get(today)
+        tomorrow_color = normalized_data.get(tomorrow)
 
         # Mise à jour du cache avec les données valides
-        valid_entries = {d: c for d, c in new_data.items() if c in COLORS}
+        valid_entries = {d: c for d, c in normalized_data.items() if c in COLORS}
         self._cached_data.update(valid_entries)
         cached_count = len(valid_entries)
         _LOGGER.info("[Validation] Cache mis à jour (%s entrées) - J: %s, J+1: %s", cached_count, today_color, tomorrow_color or 'N/A')
@@ -146,7 +149,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
 
         if not today_color:
             _LOGGER.warning("[Validation] Date J (%s) absente des données API", today)
-            _LOGGER.debug("[Validation] Dates disponibles (dernières 10): %s", sorted(new_data.keys())[-10:])
+            _LOGGER.debug("[Validation] Dates disponibles (dernières 10): %s", sorted(normalized_data.keys())[-10:])
             return False
 
         if today_color not in COLORS:
@@ -158,6 +161,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             _LOGGER.warning("[Validation] Couleur J+1 invalide: '%s' (attendu: %s)", tomorrow_color, list(COLORS.keys()))
             return False
 
+        self.tempo_data = normalized_data
         return True
 
     async def _fetch_rte_data(self, url: str) -> dict[str, Any] | None:
@@ -235,7 +239,6 @@ class TempoDataCoordinator(DataUpdateCoordinator):
 
             # Valide et met en cache les données
             if self._validate_and_cache_data(values):
-                self.tempo_data = values
                 self._data_fetched_today = True
 
                 tomorrow = get_tempo_date(1, self.tempo_day_change_time_str)

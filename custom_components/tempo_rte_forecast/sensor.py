@@ -55,12 +55,8 @@ async def async_setup_entry(
 
     sensors = [TempoNextDayCombinedSensor(coordinator, forecast_coordinator, entry)]
     
-    # Skip index 0 (J+1) because RTE provides the official J+1 sensor
     for index in range(0, NUM_FORECAST_DAYS):
-        # Text version
-        sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, visual=False, entry=entry))
-        # Visual version (emoji)
-        sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, visual=True, entry=entry))
+        sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, entry=entry))
         
     async_add_entities(sensors, True)
 

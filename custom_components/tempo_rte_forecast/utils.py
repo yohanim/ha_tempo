@@ -66,29 +66,36 @@ def get_tempo_season(date_ref: date | datetime | None = None) -> str:
 
 def get_color_code(data: str | None) -> int:
     """Retourne le code couleur pour une date donnée (avec cache)."""
-    # Essaie d'abord les données actuelles
+    if data:
+        data = data.lower()
     if data and data in COLORS:
         return COLORS[data]["code"]
     
-    return COLORS["inconnu"]["code"]
+    return COLORS["unknown"]["code"]
 
 def get_color_name(data: str | None) -> str:
     """Retourne le nom de la couleur pour une date donnée (avec cache)."""
+    if data:
+        data = data.lower()
     if data and data in COLORS:
         return COLORS[data]["name"]
     
-    return COLORS["inconnu"]["name"]
+    return COLORS["unknown"]["name"]
 
 def get_color_name_en(data: str | None) -> str:
     """Retourne le nom anglais de la couleur pour une date donnée (avec cache)."""
+    if data:
+        data = data.lower()
     if data and data in COLORS:
         return COLORS[data]["name_en"]
     
-    return COLORS["inconnu"]["name_en"]
+    return COLORS["unknown"]["name_en"]
 
 def get_color_emoji(data: str | None) -> str:
     """Retourne l'emoji de la couleur pour une date donnée (avec cache)."""
+    if data:
+        data = data.lower()
     if data and data in COLORS:
         return COLORS[data]["emoji"]
     
-    return COLORS["inconnu"]["emoji"]
+    return COLORS["unknown"]["emoji"]
