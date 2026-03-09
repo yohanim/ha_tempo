@@ -1,19 +1,6 @@
 """
 Config flow for EDF Tempo integration
 Copyright (C) 2025 Christophe Bansart
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from typing import Any
 import voluptuous as vol
@@ -74,7 +61,7 @@ class TempoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
-        return OptionsFlowHandler()
+        return OptionsFlowHandler(config_entry)
 
 class OptionsFlowHandler(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
@@ -94,6 +81,7 @@ class OptionsFlowHandler(OptionsFlow):
                     selector.SelectSelectorConfig(
                         options=["Base", "Heures Creuses", "Tempo"],
                         translation_key="contract",
+                        mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
                 vol.Optional(
@@ -127,6 +115,7 @@ class OptionsFlowHandler(OptionsFlow):
                     selector.SelectSelectorConfig(
                         options=[OPENDPE_SERVICE_LIGHT, OPENDPE_SERVICE_FULL],
                         translation_key="opendpe_service_type",
+                        mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
                 vol.Optional(
