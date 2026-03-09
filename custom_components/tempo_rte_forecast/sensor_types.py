@@ -51,6 +51,6 @@ class RTEDay:
     date: date
     color_emoji: str                                    # color emoji
     color_code: int = 0                                 # color code
-    color_name: str = COLORS["inconnu"]["name"]         # color name in French
-    color_name_en: str = COLORS["inconnu"]["name_en"]   # color name in English
+    color_name: str = COLORS["unknown"]["name"]         # color name in French
+    color_name_en: str = COLORS["unknown"]["name_en"]   # color name in English
     source: str = "RTE"

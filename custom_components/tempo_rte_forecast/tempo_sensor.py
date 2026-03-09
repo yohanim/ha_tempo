@@ -143,7 +143,7 @@ class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
     @property
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
-            identifiers={(DOMAIN, "forecast")},
+            identifiers={(DOMAIN, self.coordinator.entry.entry_id)},
             name=DEVICE_NAME,
             manufacturer=DEVICE_MANUFACTURER,
             model=DEVICE_MODEL,

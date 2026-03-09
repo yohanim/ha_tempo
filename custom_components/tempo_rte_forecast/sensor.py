@@ -75,7 +75,7 @@ async def async_setup_entry(
         price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HP"))
         price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HC"))
     elif contract == "Tempo":
-        for color in ["BLUE", "WHITE", "RED"]:
+        for color in ["blue", "white", "red"]:
             price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HP", color=color))
             price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HC", color=color))
             

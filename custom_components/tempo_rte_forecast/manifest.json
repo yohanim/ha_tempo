@@ -9,5 +9,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/yohanim/ha_tempo/issues",
   "requirements": ["babel"],
-  "version": "2.0.0-dev.02"
+  "version": "2.0.0-dev.03"
 }
