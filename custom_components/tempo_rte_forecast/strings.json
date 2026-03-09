@@ -64,7 +64,7 @@
         }
       },
       "tempo_combined": {
-        "name": "Tempo J+1 (Synthesis)",
+        "name": "Tempo color (J+1) (Synthesis)",
         "state": {
           "blue": "Blue",
           "white": "White",
