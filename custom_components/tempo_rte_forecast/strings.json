@@ -23,7 +23,11 @@
           "edf_tempo_color_refresh_time": "EDF API refresh time (default: 11:05:00)",
           "tempo_retry_delay_minutes": "RTE API retry delay (minutes)",
           "forecast_retry_delay_minutes": "Forecast API retry delay (minutes)",
-          "opendpe_service_type": "OpenDPE service type"
+          "opendpe_service_type": "OpenDPE service type",
+          "icon_color_blue": "Icon color: Blue",
+          "icon_color_white": "Icon color: White",
+          "icon_color_red": "Icon color: Red",
+          "icon_color_unknown": "Icon color: Unknown"
         }
       }
     }

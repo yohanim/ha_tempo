@@ -5,6 +5,14 @@ from homeassistant.util import dt as dt_util
 from .const import (
     TEMPO_DAY_CHANGE_TIME,
     COLORS,
+    CONF_ICON_COLOR_BLUE,
+    CONF_ICON_COLOR_WHITE,
+    CONF_ICON_COLOR_RED,
+    CONF_ICON_COLOR_UNKNOWN,
+    DEFAULT_ICON_COLOR_BLUE,
+    DEFAULT_ICON_COLOR_WHITE,
+    DEFAULT_ICON_COLOR_RED,
+    DEFAULT_ICON_COLOR_UNKNOWN,
 )
 
 def get_tempo_date(offset_days: int = 0, tempo_day_change_time_str: str = TEMPO_DAY_CHANGE_TIME) -> str:
@@ -78,6 +86,16 @@ def normalize_color(color: str | None) -> str:
         "red": "red",
     }
     return mapping.get(color, color)
+
+def get_icon_color(options: dict, color_key: str) -> str:
+    """Get icon color from options."""
+    if color_key == "blue":
+        return options.get(CONF_ICON_COLOR_BLUE, DEFAULT_ICON_COLOR_BLUE)
+    if color_key == "white":
+        return options.get(CONF_ICON_COLOR_WHITE, DEFAULT_ICON_COLOR_WHITE)
+    if color_key == "red":
+        return options.get(CONF_ICON_COLOR_RED, DEFAULT_ICON_COLOR_RED)
+    return options.get(CONF_ICON_COLOR_UNKNOWN, DEFAULT_ICON_COLOR_UNKNOWN)
 
 def get_color_code(data: str | None) -> int:
     """Retourne le code couleur pour une date donnée (avec cache)."""

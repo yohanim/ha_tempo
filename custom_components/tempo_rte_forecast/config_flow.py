@@ -33,6 +33,14 @@ from .const import (
     DEFAULT_SUBSCRIBED_POWER,
     CONF_PRICE_UPDATE_INTERVAL,
     DEFAULT_PRICE_UPDATE_INTERVAL,
+    CONF_ICON_COLOR_BLUE,
+    CONF_ICON_COLOR_WHITE,
+    CONF_ICON_COLOR_RED,
+    CONF_ICON_COLOR_UNKNOWN,
+    DEFAULT_ICON_COLOR_BLUE,
+    DEFAULT_ICON_COLOR_WHITE,
+    DEFAULT_ICON_COLOR_RED,
+    DEFAULT_ICON_COLOR_UNKNOWN,
 )
 
 
@@ -132,5 +140,21 @@ class OptionsFlowHandler(OptionsFlow):
                 ): selector.TimeSelector(),
                 vol.Optional(CONF_TEMPO_RETRY_DELAY, default=int(current_options.get(CONF_TEMPO_RETRY_DELAY, TEMPO_RETRY_DELAY_MINUTES))): int,
                 vol.Optional(CONF_FORECAST_RETRY_DELAY, default=int(current_options.get(CONF_FORECAST_RETRY_DELAY, FORECAST_RETRY_DELAY_MINUTES))): int,
+                vol.Optional(
+                    CONF_ICON_COLOR_BLUE,
+                    default=current_options.get(CONF_ICON_COLOR_BLUE, DEFAULT_ICON_COLOR_BLUE)
+                ): str,
+                vol.Optional(
+                    CONF_ICON_COLOR_WHITE,
+                    default=current_options.get(CONF_ICON_COLOR_WHITE, DEFAULT_ICON_COLOR_WHITE)
+                ): str,
+                vol.Optional(
+                    CONF_ICON_COLOR_RED,
+                    default=current_options.get(CONF_ICON_COLOR_RED, DEFAULT_ICON_COLOR_RED)
+                ): str,
+                vol.Optional(
+                    CONF_ICON_COLOR_UNKNOWN,
+                    default=current_options.get(CONF_ICON_COLOR_UNKNOWN, DEFAULT_ICON_COLOR_UNKNOWN)
+                ): str,
             }),
         )

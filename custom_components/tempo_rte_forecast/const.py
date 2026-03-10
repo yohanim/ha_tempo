@@ -14,10 +14,21 @@ COLORS = {
 
 ICON_COLORS = {
     "blue": "blue",
-    "white": "silver",
+    "white": "white",
     "red": "red",
     "unknown": "yellow",
 }
+
+CONF_ICON_COLOR_BLUE = "icon_color_blue"
+CONF_ICON_COLOR_WHITE = "icon_color_white"
+CONF_ICON_COLOR_RED = "icon_color_red"
+CONF_ICON_COLOR_UNKNOWN = "icon_color_unknown"
+
+DEFAULT_ICON_COLOR_BLUE = "blue"
+DEFAULT_ICON_COLOR_WHITE = "white"
+DEFAULT_ICON_COLOR_RED = "red"
+DEFAULT_ICON_COLOR_UNKNOWN = "yellow"
+
 # SENSOR_COLOR_BLUE_EMOJI = COLORS["BLUE"]["emoji"]
 # SENSOR_COLOR_WHITE_EMOJI = COLORS["WHITE"]["emoji"]
 # SENSOR_COLOR_RED_EMOJI = COLORS["RED"]["emoji"]

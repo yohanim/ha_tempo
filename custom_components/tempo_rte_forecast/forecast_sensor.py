@@ -7,13 +7,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .utils import get_tempo_date, get_color_name, get_color_emoji, normalize_color
+from .utils import get_tempo_date, get_color_name, get_color_emoji, normalize_color, get_icon_color
 from .const import (
     DOMAIN,
     DEVICE_MANUFACTURER,
     DEVICE_MODEL,
     COLORS,
-    ICON_COLORS,
     DEVICE_NAME,
     CONF_TEMPO_DAY_CHANGE_TIME,
     TEMPO_DAY_CHANGE_TIME,
@@ -76,7 +75,7 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
             
         attrs = asdict(day_data)
         color_key = normalize_color(day_data.color)
-        attrs["icon_color"] = ICON_COLORS.get(color_key, ICON_COLORS["unknown"])
+        attrs["icon_color"] = get_icon_color(self.coordinator.entry.options, color_key)
 
         if color_key in COLORS:
             attrs["color_name"] = COLORS[color_key]["name"]

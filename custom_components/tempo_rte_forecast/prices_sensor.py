@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CURRENCY_EURO, ATTR_ATTRIBUTION
 from homeassistant.helpers.entity import DeviceInfo
@@ -11,6 +11,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, DEVICE_NAME, DEVICE_MANUFACTURER, DEVICE_MODEL, COLORS
 from .prices_coordinator import PriceCoordinator
+from .utils import get_icon_color, normalize_color
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ ATTRIBUTION = "Prix basés sur les options de l'intégration"
 class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
     """Sensor for the current electricity price."""
 
-    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = f"{CURRENCY_EURO}/kWh"
     _attr_has_entity_name = True
     _attr_translation_key = "price"
@@ -54,6 +55,9 @@ class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
             return {}
 
         data = self.coordinator.data
+        tempo_color = data.get("tempo_color")
+        color_key = normalize_color(tempo_color)
+        
         attributes = {
             ATTR_ATTRIBUTION: ATTRIBUTION,
             "contract": data.get("contract"),
@@ -61,16 +65,17 @@ class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
             "current_period": data.get("current_period"),
             "last_update": data.get("last_update"),
             "prices_last_update": data.get("prices_last_update"),
+            "icon_color": get_icon_color(self.entry.options, color_key)
         }
         if data.get("contract") == "Tempo":
-            attributes["tempo_color"] = data.get("tempo_color")
+            attributes["tempo_color"] = tempo_color
 
         return attributes
 
 class SpecificPriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
     """Sensor for a specific price component (e.g. 'Tempo Red HP')."""
 
-    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = f"{CURRENCY_EURO}/kWh"
     _attr_has_entity_name = True
     _attr_translation_key = "specific_price"
@@ -134,12 +139,16 @@ class SpecificPriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
             "subscribed_power": data.get("subscribed_power"),
         }
         
+        # Fixed icon color for specific sensors
+        color_key = normalize_color(self._color)
+        attributes["icon_color"] = get_icon_color(self.entry.options, color_key)
+        
         current_period = data.get("current_period")
         contract = data.get("contract")
 
         if self._color:
             # Tempo
-            current_color = data.get("tempo_color", "").lower()
+            current_color = normalize_color(data.get("tempo_color", ""))
             if current_color == self._color and current_period == self._key:
                 attributes["active"] = True
         else:
