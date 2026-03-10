@@ -4,6 +4,7 @@ Copyright (C) 2025 Christophe Bansart
 """
 from __future__ import annotations
 
+import logging
 from typing import Any
 import voluptuous as vol
 
@@ -49,6 +50,7 @@ from .const import (
     DEFAULT_ICON_COLOR_UNKNOWN,
 )
 
+_LOGGER = logging.getLogger(__name__)
 
 class TempoConfigFlow(ConfigFlow, domain=DOMAIN):
     """Config flow for Tempo."""
@@ -62,10 +64,6 @@ class TempoConfigFlow(ConfigFlow, domain=DOMAIN):
                 step_id="user",
                 data_schema=vol.Schema({}),
             )
-        
-        # Check if already configured
-        await self.async_set_unique_id(DOMAIN)
-        self._abort_if_unique_id_configured()
         
         return self.async_create_entry(title=DEVICE_NAME, data={})
 
@@ -129,8 +127,7 @@ class OptionsFlowHandler(OptionsFlowWithReload):
                 vol.Optional(CONF_ICON_COLOR_RED): selector.TextSelector(),
                 vol.Optional(CONF_ICON_COLOR_UNKNOWN): selector.TextSelector(),
             }),
-            # Pre-fill with current values using suggested_value (Best Practice 2026)
-            base_suggested_values={
+            suggested_values={
                 CONF_CONTRACT: opts.get(CONF_CONTRACT, "Tempo"),
                 CONF_SUBSCRIBED_POWER: opts.get(CONF_SUBSCRIBED_POWER, DEFAULT_SUBSCRIBED_POWER),
                 CONF_OFFPEAK_RANGES: opts.get(CONF_OFFPEAK_RANGES, DEFAULT_OFFPEAK_RANGES),

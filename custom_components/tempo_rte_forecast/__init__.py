@@ -24,7 +24,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Cleanup old ghost devices
     await _async_cleanup_devices(hass, entry)
 
-    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+    # Note: No need for add_update_listener when using OptionsFlowWithReload
     
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     
@@ -65,11 +65,9 @@ async def _async_cleanup_devices(hass: HomeAssistant, entry: ConfigEntry):
     dev_reg = dr.async_get(hass)
     ent_reg = er.async_get(hass)
     
-    # Old device was identified by (DOMAIN, "forecast")
     old_device = dev_reg.async_get_device(identifiers={(DOMAIN, "forecast")})
     
     if old_device:
-        # Check if any entities are still linked to this device
         entities = er.async_entries_for_device(ent_reg, old_device.id)
         if not entities:
             dev_reg.async_remove_device(old_device.id)
@@ -82,7 +80,3 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id, None)
     
     return unload_ok
-
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload config entry."""
-    await hass.config_entries.async_reload(entry.entry_id)
