@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Configuration Tempo RTE",
-        "description": "Integration pour les couleurs RTE Tempo, les previsions et les prix."
+        "description": "Intégration pour les couleurs RTE Tempo, les prévisions et les prix."
       }
     },
     "abort": {
