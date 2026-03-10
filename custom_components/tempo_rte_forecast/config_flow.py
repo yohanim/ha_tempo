@@ -55,9 +55,6 @@ class TempoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="user",
                 data_schema=vol.Schema({}),
-                description_placeholders={
-                    "description": "Integration for RTE Tempo colors, forecasts and electricity prices."
-                },
             )
         
         return self.async_create_entry(title=DEVICE_NAME, data={})
@@ -72,19 +69,21 @@ class TempoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return OptionsFlowHandler(config_entry)
 
 class OptionsFlowHandler(OptionsFlow):
+    """Handle options flow."""
+
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        current_options = self.config_entry.options
+        options = self.config_entry.options
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
                 vol.Optional(
                     CONF_CONTRACT,
-                    default=current_options.get(CONF_CONTRACT, "Tempo")
+                    default=options.get(CONF_CONTRACT, "Tempo")
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=["Base", "Heures Creuses", "Tempo"],
@@ -94,7 +93,7 @@ class OptionsFlowHandler(OptionsFlow):
                 ),
                 vol.Optional(
                     CONF_SUBSCRIBED_POWER,
-                    default=current_options.get(CONF_SUBSCRIBED_POWER, DEFAULT_SUBSCRIBED_POWER)
+                    default=options.get(CONF_SUBSCRIBED_POWER, DEFAULT_SUBSCRIBED_POWER)
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=['3', '6', '9', '12', '15', '18', '24', '30', '36'],
@@ -103,11 +102,11 @@ class OptionsFlowHandler(OptionsFlow):
                 ),
                 vol.Optional(
                     CONF_OFFPEAK_RANGES,
-                    default=current_options.get(CONF_OFFPEAK_RANGES, DEFAULT_OFFPEAK_RANGES)
-                ): str,
+                    default=options.get(CONF_OFFPEAK_RANGES, DEFAULT_OFFPEAK_RANGES)
+                ): selector.TextSelector(),
                 vol.Optional(
                     CONF_PRICE_UPDATE_INTERVAL,
-                    default=current_options.get(CONF_PRICE_UPDATE_INTERVAL, DEFAULT_PRICE_UPDATE_INTERVAL)
+                    default=options.get(CONF_PRICE_UPDATE_INTERVAL, DEFAULT_PRICE_UPDATE_INTERVAL)
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=1,
@@ -118,7 +117,7 @@ class OptionsFlowHandler(OptionsFlow):
                 ),
                 vol.Optional(
                     CONF_OPENDPE_SERVICE_TYPE,
-                    default=current_options.get(CONF_OPENDPE_SERVICE_TYPE, OPENDPE_SERVICE_LIGHT)
+                    default=options.get(CONF_OPENDPE_SERVICE_TYPE, OPENDPE_SERVICE_LIGHT)
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[OPENDPE_SERVICE_LIGHT, OPENDPE_SERVICE_FULL],
@@ -128,33 +127,43 @@ class OptionsFlowHandler(OptionsFlow):
                 ),
                 vol.Optional(
                     CONF_TEMPO_DAY_CHANGE_TIME, 
-                    default=current_options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
+                    default=options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
                 ): selector.TimeSelector(),
                 vol.Optional(
                     CONF_RTE_TEMPO_COLOR_REFRESH_TIME,
-                    default=current_options.get(CONF_RTE_TEMPO_COLOR_REFRESH_TIME, current_options.get("api_refresh_time", DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME))
+                    default=options.get(CONF_RTE_TEMPO_COLOR_REFRESH_TIME, DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME)
                 ): selector.TimeSelector(),
                 vol.Optional(
                     CONF_EDF_TEMPO_COLOR_REFRESH_TIME,
-                    default=current_options.get(CONF_EDF_TEMPO_COLOR_REFRESH_TIME, DEFAULT_EDF_TEMPO_COLOR_REFRESH_TIME)
+                    default=options.get(CONF_EDF_TEMPO_COLOR_REFRESH_TIME, DEFAULT_EDF_TEMPO_COLOR_REFRESH_TIME)
                 ): selector.TimeSelector(),
-                vol.Optional(CONF_TEMPO_RETRY_DELAY, default=int(current_options.get(CONF_TEMPO_RETRY_DELAY, TEMPO_RETRY_DELAY_MINUTES))): int,
-                vol.Optional(CONF_FORECAST_RETRY_DELAY, default=int(current_options.get(CONF_FORECAST_RETRY_DELAY, FORECAST_RETRY_DELAY_MINUTES))): int,
+                vol.Optional(
+                    CONF_TEMPO_RETRY_DELAY, 
+                    default=options.get(CONF_TEMPO_RETRY_DELAY, TEMPO_RETRY_DELAY_MINUTES)
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(min=1, max=1440, mode=selector.NumberSelectorMode.BOX)
+                ),
+                vol.Optional(
+                    CONF_FORECAST_RETRY_DELAY, 
+                    default=options.get(CONF_FORECAST_RETRY_DELAY, FORECAST_RETRY_DELAY_MINUTES)
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(min=1, max=1440, mode=selector.NumberSelectorMode.BOX)
+                ),
                 vol.Optional(
                     CONF_ICON_COLOR_BLUE,
-                    default=current_options.get(CONF_ICON_COLOR_BLUE, DEFAULT_ICON_COLOR_BLUE)
-                ): str,
+                    default=options.get(CONF_ICON_COLOR_BLUE, DEFAULT_ICON_COLOR_BLUE)
+                ): selector.TextSelector(),
                 vol.Optional(
                     CONF_ICON_COLOR_WHITE,
-                    default=current_options.get(CONF_ICON_COLOR_WHITE, DEFAULT_ICON_COLOR_WHITE)
-                ): str,
+                    default=options.get(CONF_ICON_COLOR_WHITE, DEFAULT_ICON_COLOR_WHITE)
+                ): selector.TextSelector(),
                 vol.Optional(
                     CONF_ICON_COLOR_RED,
-                    default=current_options.get(CONF_ICON_COLOR_RED, DEFAULT_ICON_COLOR_RED)
-                ): str,
+                    default=options.get(CONF_ICON_COLOR_RED, DEFAULT_ICON_COLOR_RED)
+                ): selector.TextSelector(),
                 vol.Optional(
                     CONF_ICON_COLOR_UNKNOWN,
-                    default=current_options.get(CONF_ICON_COLOR_UNKNOWN, DEFAULT_ICON_COLOR_UNKNOWN)
-                ): str,
+                    default=options.get(CONF_ICON_COLOR_UNKNOWN, DEFAULT_ICON_COLOR_UNKNOWN)
+                ): selector.TextSelector(),
             }),
         )

@@ -5,6 +5,7 @@ Copyright (C) 2025 Christophe Bansart
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr
 
 from .const import (
     DOMAIN
@@ -19,6 +20,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     # Migrate unique IDs if necessary
     await _async_migrate_unique_ids(hass, entry)
+    
+    # Cleanup old ghost devices
+    await _async_cleanup_devices(hass, entry)
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     
@@ -55,6 +59,20 @@ async def _async_migrate_unique_ids(hass: HomeAssistant, entry: ConfigEntry):
         if new_unique_id and new_unique_id != old_unique_id:
             if not ent_reg.async_get_entity_id(entity.domain, entity.platform, new_unique_id):
                 ent_reg.async_update_entity(entity.entity_id, new_unique_id=new_unique_id)
+
+async def _async_cleanup_devices(hass: HomeAssistant, entry: ConfigEntry):
+    """Remove old devices that have no entities."""
+    dev_reg = dr.async_get(hass)
+    ent_reg = er.async_get(hass)
+    
+    # Old device was identified by (DOMAIN, "forecast")
+    old_device = dev_reg.async_get_device(identifiers={(DOMAIN, "forecast")})
+    
+    if old_device:
+        # Check if any entities are still linked to this device
+        entities = er.async_entries_for_device(ent_reg, old_device.id)
+        if not entities:
+            dev_reg.async_remove_device(old_device.id)
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload integration."""
