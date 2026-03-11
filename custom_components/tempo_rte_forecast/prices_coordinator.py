@@ -357,9 +357,29 @@ class PriceCoordinator(DataUpdateCoordinator):
 
             price = self._prices.get("Tempo", {}).get(tempo_color, {}).get(current_period, 0.0)
 
+        # Calculate next change time
+        next_change = None
+        trigger_times = set()
+        for start, end in self._offpeak_ranges:
+            trigger_times.add(start)
+            trigger_times.add(end)
+        trigger_times.add(self.tempo_coordinator.tempo_day_change_time)
+        
+        current_time = now.time()
+        sorted_triggers = sorted(list(trigger_times))
+        
+        for t in sorted_triggers:
+            if t > current_time:
+                next_change = t
+                break
+        
+        if next_change is None and sorted_triggers:
+            next_change = sorted_triggers[0]
+
         return {
             "price": price,
             "is_hc": is_hc,
+            "is_hp": not is_hc,
             "current_period": current_period,
             "contract": self._contract,
             "tempo_color": tempo_color if self._contract == "Tempo" else None,
@@ -367,4 +387,12 @@ class PriceCoordinator(DataUpdateCoordinator):
             "prices_last_update": self._last_price_update.isoformat() if self._last_price_update else None,
             "contract_prices": self._prices.get(self._contract, {}),
             "subscribed_power": self._subscribed_power,
+            # Combined boolean attributes for easier automations
+            "is_blue_hp": tempo_color == "blue" and current_period == "HP",
+            "is_blue_hc": tempo_color == "blue" and current_period == "HC",
+            "is_white_hp": tempo_color == "white" and current_period == "HP",
+            "is_white_hc": tempo_color == "white" and current_period == "HC",
+            "is_red_hp": tempo_color == "red" and current_period == "HP",
+            "is_red_hc": tempo_color == "red" and current_period == "HC",
+            "next_period_change": next_change.strftime("%H:%M:%S") if next_change else None,
         }

@@ -108,7 +108,7 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         else:
             data_source = "cache"
 
-        return {
+        attributes = {
             "date": day,
             "color": day_color,
             "color_en": day_color_en,
@@ -120,6 +120,14 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
             "icon_color": icon_color,
             "data_source": data_source,
         }
+
+        # Add J+1 specific attributes for easier automation
+        if self.index == 1:
+            attributes["tomorrow_is_blue"] = color_key == "blue"
+            attributes["tomorrow_is_white"] = color_key == "white"
+            attributes["tomorrow_is_red"] = color_key == "red"
+
+        return attributes
 
 class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
     """Sensor combining RTE J+1 and OpenDPE if unknown."""
@@ -205,5 +213,8 @@ class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
             "forecast_emoji": forecast_emoji,
             "active_source": "RTE" if rte_key != "unknown" else "OpenDPE",
             "color_emoji": COLORS[rte_key]["emoji"] if rte_key != "unknown" else f"{COLORS['unknown']['emoji']} {forecast_emoji}",
-            "icon_color": icon_color
+            "icon_color": icon_color,
+            "tomorrow_is_blue": active_key == "blue",
+            "tomorrow_is_white": active_key == "white",
+            "tomorrow_is_red": active_key == "red",
         }

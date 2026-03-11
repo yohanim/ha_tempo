@@ -62,10 +62,18 @@ class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
             ATTR_ATTRIBUTION: ATTRIBUTION,
             "contract": data.get("contract"),
             "is_hc": data.get("is_hc"),
+            "is_hp": data.get("is_hp"),
             "current_period": data.get("current_period"),
             "last_update": data.get("last_update"),
             "prices_last_update": data.get("prices_last_update"),
-            "icon_color": get_icon_color(self.entry.options, color_key)
+            "icon_color": get_icon_color(self.entry.options, color_key),
+            "is_blue_hp": data.get("is_blue_hp"),
+            "is_blue_hc": data.get("is_blue_hc"),
+            "is_white_hp": data.get("is_white_hp"),
+            "is_white_hc": data.get("is_white_hc"),
+            "is_red_hp": data.get("is_red_hp"),
+            "is_red_hc": data.get("is_red_hc"),
+            "next_period_change": data.get("next_period_change"),
         }
         if data.get("contract") == "Tempo":
             attributes["tempo_color"] = tempo_color

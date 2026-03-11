@@ -45,15 +45,19 @@ Information is distributed across different sensors for clarity.
 ### `sensor.current_price`
 - `current_period`: "HP" (Peak) or "HC" (Off-peak).
 - `is_hc`: `true` if the current period is Off-peak.
+- `is_hp`: `true` if the current period is Peak.
 - `contract`: Your contract type (Base, Heures Creuses, Tempo).
 - `tempo_color`: The current Tempo color if your contract is Tempo.
 - `prices_last_update`: Date of the last price grid update.
 - `subscribed_power`: Your subscribed power in kVA.
+- `next_period_change`: Time of the next tariff change (e.g., "22:00:00").
+- `is_blue_hp`, `is_blue_hc`, `is_white_hp`, `is_white_hc`, `is_red_hp`, `is_red_hc`: Combined boolean attributes for easy automations.
 
 ### `sensor.tempo_color_j` (and J+1)
 - `date`: Date of the day concerned.
 - `color`: Color name (Blue, White, Red).
 - `is_red` / `is_white` / `is_blue`: `true` if the color matches.
+- `tomorrow_is_red` / `tomorrow_is_white` / `tomorrow_is_blue`: Boolean attributes for J+1 sensor.
 - `color_emoji`: Emoji representing the color.
 - `data_source`: "api", "cache", or "none".
 
@@ -64,15 +68,19 @@ Information is distributed across different sensors for clarity.
 
 ---
 
-## 🤖 Automation Examples
+## 🤖 Automation Examples (Simplified)
+
+With the new combined attributes, automations are now much simpler. No more complex conditions!
 
 ### 1. Limit consumption during Red Peak hours
 ```yaml
 automation:
   - alias: "Red Day Peak Energy Saving"
     trigger:
-      - platform: template
-        value_template: "{{ is_state_attr('sensor.tempo_color_j', 'is_red', true) and is_state_attr('sensor.current_price', 'current_period', 'HP') }}"
+      - platform: state
+        entity_id: sensor.current_price
+        attribute: is_red_hp
+        to: true
     action:
       - service: climate.set_temperature
         target:
@@ -90,8 +98,8 @@ automation:
   - alias: "Alert Red Day Tomorrow"
     trigger:
       - platform: state
-        entity_id: sensor.tempo_color_j1
-        attribute: is_red
+        entity_id: sensor.tempo_color_j1_combined
+        attribute: tomorrow_is_red
         to: true
     action:
       - service: notify.mobile_app
@@ -122,24 +130,35 @@ automation:
           temperature: 21
 ```
 
-### 4. Template Sensors (Optional)
+### 4. Anticipate Peak hour (30 min before)
+```yaml
+automation:
+  - alias: "Anticipate Peak Hour"
+    trigger:
+      - platform: template
+        value_template: >
+          {{ (as_timestamp(today_at(state_attr('sensor.current_price', 'next_period_change'))) - as_timestamp(now())) | int <= 1800 
+             and is_state_attr('sensor.current_price', 'current_period', 'HC') }}
+    action:
+      - service: notify.mobile_app
+        data:
+          message: "Peak hour starting in 30 minutes. Last chance for laundry!"
+```
+
+### 5. Template Sensors (Optional)
 ```yaml
 template:
   - binary_sensor:
       - name: "Red Day Peak"
-        state: "{{ is_state_attr('sensor.tempo_color_j', 'is_red', true) and is_state_attr('sensor.current_price', 'current_period', 'HP') }}"
+        state: "{{ state_attr('sensor.current_price', 'is_red_hp') }}"
         icon: mdi:flash-alert
 
       - name: "Tomorrow Red"
-        state: "{{ is_state_attr('sensor.tempo_color_j1', 'is_red', true) }}"
+        state: "{{ state_attr('sensor.tempo_color_j1_combined', 'tomorrow_is_red') }}"
         icon: mdi:calendar-alert
-
-      - name: "Off-Peak Hours"
-        state: "{{ is_state_attr('sensor.current_price', 'is_hc', true) }}"
-        icon: mdi:power-sleep
 ```
 
-### 5. UI Markdown Card
+### 6. UI Markdown Card
 ```yaml
 type: markdown
 content: |
@@ -148,7 +167,7 @@ content: |
   Period: **{{ state_attr('sensor.current_price', 'current_period') }}**
 
   ## Tempo Tomorrow
-  Color: **{{ states('sensor.tempo_color_j1') }} {{ state_attr('sensor.tempo_color_j1', 'color_emoji') }}**
+  Color: **{{ states('sensor.tempo_color_j1_combined') }} {{ state_attr('sensor.tempo_color_j1_combined', 'color_emoji') }}**
 ```
 
 ---
@@ -204,15 +223,19 @@ Les informations sont réparties sur les différents capteurs pour plus de clart
 ### `sensor.current_price`
 - `current_period`: "HP" ou "HC".
 - `is_hc`: `true` si la période actuelle est en Heures Creuses.
+- `is_hp`: `true` si la période actuelle est en Heures Pleines.
 - `contract`: Votre type de contrat (Base, Heures Creuses, Tempo).
 - `tempo_color`: La couleur Tempo en cours si votre contrat est Tempo.
 - `prices_last_update`: Date de la dernière mise à jour des grilles de prix.
 - `subscribed_power`: Votre puissance souscrite en kVA.
+- `next_period_change`: Heure du prochain changement de tarif (ex: "22:00:00").
+- `is_blue_hp`, `is_blue_hc`, `is_white_hp`, `is_white_hc`, `is_red_hp`, `is_red_hc`: Booléens combinés pour faciliter les automatisations.
 
 ### `sensor.tempo_color_j` (et J+1)
 - `date`: La date du jour concerné.
 - `color`: Le nom de la couleur (Bleu, Blanc, Rouge).
 - `is_red` / `is_white` / `is_blue`: `true` si la couleur correspond.
+- `tomorrow_is_red` / `tomorrow_is_white` / `tomorrow_is_blue`: Booléens pour le capteur J+1.
 - `color_emoji`: Emoji représentant la couleur.
 - `data_source`: "api", "cache", ou "none".
 
@@ -223,15 +246,19 @@ Les informations sont réparties sur les différents capteurs pour plus de clart
 
 ---
 
-## 🤖 Exemples d'automatisations
+## 🤖 Exemples d'automatisations (Simplifiés)
+
+Grâce aux nouveaux attributs combinés, les automatisations sont désormais beaucoup plus simples. Plus besoin de conditions complexes !
 
 ### 1. Limiter la consommation en jour rouge HP
 ```yaml
 automation:
   - alias: "Économie jour rouge HP"
     trigger:
-      - platform: template
-        value_template: "{{ is_state_attr('sensor.tempo_color_j', 'is_red', true) and is_state_attr('sensor.current_price', 'current_period', 'HP') }}"
+      - platform: state
+        entity_id: sensor.current_price
+        attribute: is_red_hp
+        to: true
     action:
       - service: climate.set_temperature
         target:
@@ -249,8 +276,8 @@ automation:
   - alias: "Alerte J+1 rouge"
     trigger:
       - platform: state
-        entity_id: sensor.tempo_color_j1
-        attribute: is_red
+        entity_id: sensor.tempo_color_j1_combined
+        attribute: tomorrow_is_red
         to: true
     action:
       - service: notify.mobile_app
@@ -281,34 +308,44 @@ automation:
           temperature: 21
 ```
 
-### 4. Template Sensors pour simplifier (optionnel)
+### 4. Anticiper le passage en HP (30 min avant)
+```yaml
+automation:
+  - alias: "Anticipation Heures Pleines"
+    trigger:
+      - platform: template
+        value_template: >
+          {{ (as_timestamp(today_at(state_attr('sensor.current_price', 'next_period_change'))) - as_timestamp(now())) | int <= 1800 
+             and is_state_attr('sensor.current_price', 'current_period', 'HC') }}
+    action:
+      - service: notify.mobile_app
+        data:
+          message: "Passage en Heures Pleines dans 30 minutes. C'est le moment de lancer une dernière machine !"
+```
+
+### 5. Template Sensors pour simplifier (optionnel)
 ```yaml
 template:
   - binary_sensor:
       - name: "Jour Rouge HP"
-        state: "{{ is_state_attr('sensor.tempo_color_j', 'is_red', true) and is_state_attr('sensor.current_price', 'current_period', 'HP') }}"
+        state: "{{ state_attr('sensor.current_price', 'is_red_hp') }}"
         icon: mdi:flash-alert
 
       - name: "Demain Rouge"
-        state: "{{ is_state_attr('sensor.tempo_color_j1', 'is_red', true) }}"
+        state: "{{ state_attr('sensor.tempo_color_j1_combined', 'tomorrow_is_red') }}"
         icon: mdi:calendar-alert
-
-      - name: "Heures Creuses"
-        state: "{{ is_state_attr('sensor.current_price', 'is_hc', true) }}"
-        icon: mdi:power-sleep
 ```
 
-### 5. Carte Markdown pour l'interface
+### 6. Carte Markdown pour l'interface
 ```yaml
-# Dans une carte Markdown
 type: markdown
 content: |
-  ## Tempo aujourd'hui
+  ## Tempo Aujourd'hui
   Couleur : **{{ states('sensor.tempo_color_j') }} {{ state_attr('sensor.tempo_color_j', 'color_emoji') }}**
   Période : **{{ state_attr('sensor.current_price', 'current_period') }}**
 
-  ## Tempo demain
-  Couleur : **{{ states('sensor.tempo_color_j1') }} {{ state_attr('sensor.tempo_color_j1', 'color_emoji') }}**
+  ## Tempo Demain
+  Couleur : **{{ states('sensor.tempo_color_j1_combined') }} {{ state_attr('sensor.tempo_color_j1_combined', 'color_emoji') }}**
 ```
 
 ---
