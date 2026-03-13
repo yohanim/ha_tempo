@@ -129,8 +129,12 @@ class PriceCoordinator(DataUpdateCoordinator):
 
         for t in trigger_times:
             self._scheduled_update_listeners.append(
-                async_track_time_change(self.hass, self.async_refresh, hour=t.hour, minute=t.minute, second=t.second)
+                async_track_time_change(self.hass, self._async_scheduled_refresh, hour=t.hour, minute=t.minute, second=t.second)
             )
+
+    async def _async_scheduled_refresh(self, _now: datetime) -> None:
+        """Trigger a refresh of the coordinator data."""
+        await self.async_refresh()
 
     async def _update_prices(self, _now: datetime | None = None) -> None:
         """Fetch and parse prices from data.gouv.fr."""
