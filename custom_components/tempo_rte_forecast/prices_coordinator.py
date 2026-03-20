@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 import async_timeout
 import io
 import csv
+import copy
 from typing import Any
 
 from homeassistant.core import HomeAssistant, callback
@@ -62,7 +63,7 @@ class PriceCoordinator(DataUpdateCoordinator):
         self._contract = "Base"
         self._subscribed_power = DEFAULT_SUBSCRIBED_POWER
         self._price_update_interval = DEFAULT_PRICE_UPDATE_INTERVAL
-        self._prices = FALLBACK_PRICES
+        self._prices = copy.deepcopy(FALLBACK_PRICES)
         self._last_price_update = None
         self._scheduled_update_listeners = []
         self._setup_from_options()

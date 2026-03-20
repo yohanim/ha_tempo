@@ -95,6 +95,7 @@ class ForecastCoordinator(DataUpdateCoordinator):
         """Open DPE data recovery."""
         try:
             forecasts = await async_fetch_opendpe_forecast(self)
+            self.tempo_data = forecasts
             _LOGGER.debug("Open DPE: %s jours récupérés", len(forecasts))
             return forecasts
 
