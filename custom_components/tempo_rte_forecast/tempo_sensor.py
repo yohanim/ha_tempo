@@ -5,18 +5,14 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from .tempo_coordinator import TempoDataCoordinator
 from .forecast_coordinator import ForecastCoordinator
 from .utils import (
-    get_tempo_date, 
-    get_color_code, 
-    get_color_name, 
-    get_color_emoji, 
-    get_color_name_en, 
+    get_tempo_date,
     normalize_color,
-    get_icon_color
+    get_icon_color,
 )
 from .const import (
     DOMAIN,
@@ -94,7 +90,7 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         day_data = self.coordinator.get_data(day)
         
         color_key = normalize_color(day_data)
-        icon_color = get_icon_color(self.coordinator.config_entry.options, color_key)
+        icon_color = get_icon_color(self.coordinator.entry.options, color_key)
 
         day_color_code = COLORS[color_key]["code"]
         day_color = COLORS[color_key]["name"]
@@ -200,7 +196,7 @@ class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
         
         # Color logic for icon: RTE first, then Forecast
         active_key = rte_key if rte_key != "unknown" else forecast_key
-        icon_color = get_icon_color(self.coordinator.config_entry.options, rte_key)
+        icon_color = get_icon_color(self.coordinator.entry.options, rte_key)
 
         forecast_emoji = COLORS.get(forecast_key, {}).get("emoji", forecast_key) if forecast_data else "unknown"
 

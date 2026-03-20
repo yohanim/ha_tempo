@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import async_timeout
 import io
 import csv
+import copy
 from typing import Any
 
 from homeassistant.core import HomeAssistant, callback
@@ -62,14 +63,11 @@ class PriceCoordinator(DataUpdateCoordinator):
         self._contract = "Base"
         self._subscribed_power = DEFAULT_SUBSCRIBED_POWER
         self._price_update_interval = DEFAULT_PRICE_UPDATE_INTERVAL
-        self._prices = FALLBACK_PRICES
+        self._prices = copy.deepcopy(FALLBACK_PRICES)
         self._last_price_update = None
         self._scheduled_update_listeners = []
         self._setup_from_options()
 
-        # Listen for option changes
-        entry.add_update_listener(self._handle_options_update)
-        
         # Calculate 5 minutes before Tempo day change
         change_time = tempo_coordinator.tempo_day_change_time
         # Create a dummy datetime to perform arithmetic
@@ -78,7 +76,15 @@ class PriceCoordinator(DataUpdateCoordinator):
         update_time = update_dt.time()
 
         # Schedule prices update once a day (5 minutes before day change)
-        async_track_time_change(hass, self._update_prices, hour=update_time.hour, minute=update_time.minute, second=update_time.second)
+        self._scheduled_update_listeners.append(
+            async_track_time_change(
+                hass,
+                self._update_prices,
+                hour=update_time.hour,
+                minute=update_time.minute,
+                second=update_time.second,
+            )
+        )
         # Initial prices fetch
         self.hass.async_create_task(self._update_prices())
 
@@ -99,14 +105,6 @@ class PriceCoordinator(DataUpdateCoordinator):
             self._price_update_interval,
         )
         self._schedule_listeners()
-
-    async def _handle_options_update(self, hass: HomeAssistant, entry: ConfigEntry):
-        """Handle options update."""
-        _LOGGER.info("Configuration options updated, reloading price coordinator.")
-        self._setup_from_options()
-        # Re-fetch prices if power or contract changed
-        await self._update_prices()
-        await self.async_refresh()
 
     def _schedule_listeners(self):
         """Schedule updates at specific times."""
@@ -135,6 +133,12 @@ class PriceCoordinator(DataUpdateCoordinator):
     async def _async_scheduled_refresh(self, _now: datetime) -> None:
         """Trigger a refresh of the coordinator data."""
         await self.async_refresh()
+
+    async def async_shutdown(self) -> None:
+        """Release scheduled listeners."""
+        for remove_listener in self._scheduled_update_listeners:
+            remove_listener()
+        self._scheduled_update_listeners.clear()
 
     async def _update_prices(self, _now: datetime | None = None) -> None:
         """Fetch and parse prices from data.gouv.fr."""
