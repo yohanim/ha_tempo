@@ -205,5 +205,10 @@ class TempoConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
-        """Create the options flow."""
+        """Create the options flow.
+
+        Do not pass config_entry into OptionsFlowHandler: OptionsFlow.config_entry is a
+        read-only property set by Home Assistant (HA 2025+). Assigning it raises
+        AttributeError: property 'config_entry' of ... has no setter.
+        """
         return OptionsFlowHandler()
