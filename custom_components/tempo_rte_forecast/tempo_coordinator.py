@@ -56,6 +56,8 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         self._cached_data = {}  # Cache pour garder les dernières données valides
         self._last_api_call = None
         self._data_fetched_today = False
+        self._scheduled_listeners: list = []
+        self._retry_unsub = None
         
         # Utilisation d'une session partagée. La vérification SSL est activée par défaut.
         self.session = async_get_clientsession(hass)
@@ -66,30 +68,36 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         """Programme les mises à jour aux heures clés."""
 
         # Au moment du changement de jour Tempo
-        async_track_time_change(
-            self.hass,
-            self._trigger_day_change,
-            hour=self.tempo_day_change_time.hour,
-            minute=self.tempo_day_change_time.minute,
-            second=self.tempo_day_change_time.second
+        self._scheduled_listeners.append(
+            async_track_time_change(
+                self.hass,
+                self._trigger_day_change,
+                hour=self.tempo_day_change_time.hour,
+                minute=self.tempo_day_change_time.minute,
+                second=self.tempo_day_change_time.second,
+            )
         )
 
         # À {self.rte_tempo_refresh_time_str} : récupération API pour couleur J+1
-        async_track_time_change(
-            self.hass,
-            self._trigger_api_refresh,
-            hour=self.rte_tempo_refresh_time.hour,
-            minute=self.rte_tempo_refresh_time.minute,
-            second=self.rte_tempo_refresh_time.second
+        self._scheduled_listeners.append(
+            async_track_time_change(
+                self.hass,
+                self._trigger_api_refresh,
+                hour=self.rte_tempo_refresh_time.hour,
+                minute=self.rte_tempo_refresh_time.minute,
+                second=self.rte_tempo_refresh_time.second,
+            )
         )
 
         # À {self.edf_tempo_refresh_time_str} : récupération API pour couleur J+1 (EDF)
-        async_track_time_change(
-            self.hass,
-            self._trigger_api_refresh,
-            hour=self.edf_tempo_refresh_time.hour,
-            minute=self.edf_tempo_refresh_time.minute,
-            second=self.edf_tempo_refresh_time.second
+        self._scheduled_listeners.append(
+            async_track_time_change(
+                self.hass,
+                self._trigger_api_refresh,
+                hour=self.edf_tempo_refresh_time.hour,
+                minute=self.edf_tempo_refresh_time.minute,
+                second=self.edf_tempo_refresh_time.second,
+            )
         )
 
         _LOGGER.info("Mises à jour programmées: %s (Changement jour Tempo), %s (API RTE), %s (API EDF)", self.tempo_day_change_time_str, self.rte_tempo_refresh_time_str, self.edf_tempo_refresh_time_str)
@@ -118,6 +126,21 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         
         # Force la mise à jour des entités (sans appel API)
         self.async_set_updated_data(self.tempo_data)
+
+    async def _async_retry_refresh(self, _now: datetime) -> None:
+        """Retry callback compatible with async_call_later."""
+        self._retry_unsub = None
+        await self.async_refresh()
+
+    def _schedule_retry(self) -> None:
+        """Schedule one retry refresh if not already planned."""
+        if self._retry_unsub is not None:
+            return
+        self._retry_unsub = async_call_later(
+            self.hass,
+            timedelta(minutes=self.retry_delay),
+            self._async_retry_refresh,
+        )
 
     def _validate_and_cache_data(self, new_data: dict[str, Any]) -> bool:
         """Valide les nouvelles données et met à jour le cache si valides."""
@@ -254,9 +277,18 @@ class TempoDataCoordinator(DataUpdateCoordinator):
             _LOGGER.warning("[API] Aucune donnée valide récupérée (ni Light, ni Full)")
 
         # Si on arrive ici, c'est un échec : on planifie un retry
-        async_call_later(self.hass, timedelta(minutes=self.retry_delay), self.async_refresh)
+        self._schedule_retry()
         return self._cached_data
-        
+
+    async def async_shutdown(self) -> None:
+        """Release listeners and pending retry callbacks."""
+        for remove_listener in self._scheduled_listeners:
+            remove_listener()
+        self._scheduled_listeners.clear()
+        if self._retry_unsub is not None:
+            self._retry_unsub()
+            self._retry_unsub = None
+
     def get_data(self, date: str) -> str | None:
         if date in self.tempo_data:
             return self.tempo_data.get(date)

@@ -94,7 +94,7 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         day_data = self.coordinator.get_data(day)
         
         color_key = normalize_color(day_data)
-        icon_color = get_icon_color(self.coordinator.config_entry.options, color_key)
+        icon_color = get_icon_color(self.coordinator.entry.options, color_key)
 
         day_color_code = COLORS[color_key]["code"]
         day_color = COLORS[color_key]["name"]
@@ -200,7 +200,7 @@ class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
         
         # Color logic for icon: RTE first, then Forecast
         active_key = rte_key if rte_key != "unknown" else forecast_key
-        icon_color = get_icon_color(self.coordinator.config_entry.options, rte_key)
+        icon_color = get_icon_color(self.coordinator.entry.options, rte_key)
 
         forecast_emoji = COLORS.get(forecast_key, {}).get("emoji", forecast_key) if forecast_data else "unknown"
 

@@ -40,43 +40,56 @@ class ForecastCoordinator(DataUpdateCoordinator):
         self.hass = hass
         self.session = async_get_clientsession(hass)
         self.entry = entry
-        self.update_listener = entry.add_update_listener(self._options_update_callback)
         self.retry_delay = entry.options.get(CONF_FORECAST_RETRY_DELAY, FORECAST_RETRY_DELAY_MINUTES)
         self.service_type = entry.options.get(CONF_OPENDPE_SERVICE_TYPE, OPENDPE_SERVICE_LIGHT)
         self.tempo_data = {}
         self._cached_data = {}  # Cache pour garder les dernières données valides
+        self._scheduled_listeners: list = []
+        self._retry_unsub = None
 
         # Daily update after 7h00 and 15h00 with auto-retry and cache
-        async_track_time_change(
-            hass,
-            self._scheduled_refresh,
-            hour=7,
-            minute=0,
-            second=0,
+        self._scheduled_listeners.append(
+            async_track_time_change(
+                hass,
+                self._scheduled_refresh,
+                hour=7,
+                minute=0,
+                second=0,
+            )
         )
-        async_track_time_change(
-            hass,
-            self._scheduled_refresh,
-            hour=15,
-            minute=0,
-            second=0,
+        self._scheduled_listeners.append(
+            async_track_time_change(
+                hass,
+                self._scheduled_refresh,
+                hour=15,
+                minute=0,
+                second=0,
+            )
         )
 
         _LOGGER.debug(
             "ForecastCoordinator initialisé : refresh quotidien programmé à 07:00 + intervalle 6h"
         )
 
-    async def _options_update_callback(self, hass: HomeAssistant, entry: ConfigEntry):
-        """Handle options update."""
-        _LOGGER.info("Configuration options for Tempo Forecast updated, requesting refresh.")
-        self.service_type = entry.options.get(CONF_OPENDPE_SERVICE_TYPE, OPENDPE_SERVICE_LIGHT)
-        self.retry_delay = entry.options.get(CONF_FORECAST_RETRY_DELAY, FORECAST_RETRY_DELAY_MINUTES)
-        await self.async_request_refresh()
-
     async def _scheduled_refresh(self, now: datetime) -> None:
         """Update at 07:00 every day."""
         _LOGGER.debug("Open DPE: lancement du refresh programmé à %s", now.strftime("%Hh%M"))
         await self.async_refresh()
+
+    async def _async_retry_refresh(self, _now: datetime) -> None:
+        """Retry callback compatible with async_call_later."""
+        self._retry_unsub = None
+        await self.async_refresh()
+
+    def _schedule_retry(self) -> None:
+        """Schedule one retry refresh if not already planned."""
+        if self._retry_unsub is not None:
+            return
+        self._retry_unsub = async_call_later(
+            self.hass,
+            timedelta(minutes=self.retry_delay),
+            self._async_retry_refresh,
+        )
 
     async def _async_update_data(self) -> dict[str, ForecastSensor] | None:
         """Open DPE data recovery."""
@@ -88,8 +101,18 @@ class ForecastCoordinator(DataUpdateCoordinator):
         except Exception as exc:
             _LOGGER.error("Open DPE: erreur lors de la mise à jour: %s", exc)
             # raise UpdateFailed(f"Erreur mise à jour des prévisions Open DPE: {exc}")
-            async_call_later(self.hass, timedelta(minutes=self.retry_delay), self.async_refresh)
-        
+            self._schedule_retry()
+            return self._cached_data
+
+    async def async_shutdown(self) -> None:
+        """Release listeners and pending retry callbacks."""
+        for remove_listener in self._scheduled_listeners:
+            remove_listener()
+        self._scheduled_listeners.clear()
+        if self._retry_unsub is not None:
+            self._retry_unsub()
+            self._retry_unsub = None
+
     def get_data(self, date: str) -> ForecastSensor | None:
         if date in self.tempo_data:
             return self.tempo_data.get(date)
@@ -173,7 +196,7 @@ async def async_fetch_opendpe_forecast(self: ForecastCoordinator) -> dict[str, F
         async with session.get(url, timeout=10) as response:
             if response.status != 200:
                 _LOGGER.error("Open-DPE: HTTP %s", response.status)
-                async_call_later(self.hass, timedelta(minutes=self.retry_delay), self.async_refresh)
+                self._schedule_retry()
                 return self._cached_data
 
             # Lire le contenu brut pour diagnostic
@@ -188,5 +211,5 @@ async def async_fetch_opendpe_forecast(self: ForecastCoordinator) -> dict[str, F
 
     except Exception as exc:
         _LOGGER.error("Open DPE: erreur lors de la récupération JSON : %s", exc)
-        async_call_later(self.hass, timedelta(minutes=self.retry_delay), self.async_refresh)
+        self._schedule_retry()
         return self._cached_data

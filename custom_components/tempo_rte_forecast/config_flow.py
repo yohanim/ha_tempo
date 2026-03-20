@@ -55,12 +55,13 @@ _LOGGER = logging.getLogger(__name__)
 class OptionsFlowHandler(OptionsFlow):
     """Handle options flow."""
 
+    def __init__(self, config_entry: ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+        self._data: dict[str, Any] = dict(config_entry.options)
+
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Manage the options."""
-        # Initialize data with current options if not already done
-        if not hasattr(self, "_data"):
-            self._data = dict(self.config_entry.options)
-
         return self.async_show_menu(
             step_id="init",
             menu_options=["prices", "api", "retries", "icons", "finish"]
@@ -207,4 +208,4 @@ class TempoConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         """Create the options flow."""
-        return OptionsFlowHandler()
+        return OptionsFlowHandler(config_entry)

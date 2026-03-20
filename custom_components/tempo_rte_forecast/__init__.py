@@ -2,6 +2,10 @@
 EDF Tempo integration for Home Assistant
 Copyright (C) 2025 Christophe Bansart
 """
+from __future__ import annotations
+
+from dataclasses import dataclass
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
@@ -10,25 +14,53 @@ from homeassistant.helpers import device_registry as dr
 from .const import (
     DOMAIN
 )
+from .forecast_coordinator import ForecastCoordinator
+from .prices_coordinator import PriceCoordinator
+from .tempo_coordinator import TempoDataCoordinator
 
 PLATFORMS = ["sensor"]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+@dataclass
+class TempoRuntimeData:
+    """Runtime data for a config entry."""
+
+    tempo_coordinator: TempoDataCoordinator
+    forecast_coordinator: ForecastCoordinator
+    price_coordinator: PriceCoordinator
+
+
+type TempoConfigEntry = ConfigEntry[TempoRuntimeData]
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> bool:
     """Setup integration from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
-    
     # Migrate unique IDs if necessary
     await _async_migrate_unique_ids(hass, entry)
-    
+
     # Cleanup old ghost devices
     await _async_cleanup_devices(hass, entry)
 
+    tempo_coordinator = TempoDataCoordinator(hass, entry)
+    await tempo_coordinator.async_config_entry_first_refresh()
+
+    forecast_coordinator = ForecastCoordinator(hass, entry)
+    await forecast_coordinator.async_config_entry_first_refresh()
+
+    price_coordinator = PriceCoordinator(hass, entry, tempo_coordinator)
+    await price_coordinator.async_config_entry_first_refresh()
+
+    entry.runtime_data = TempoRuntimeData(
+        tempo_coordinator=tempo_coordinator,
+        forecast_coordinator=forecast_coordinator,
+        price_coordinator=price_coordinator,
+    )
+
     # Listen for option changes
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
-    
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    
+
     return True
 
 async def _async_migrate_unique_ids(hass: HomeAssistant, entry: ConfigEntry):
@@ -73,13 +105,13 @@ async def _async_cleanup_devices(hass: HomeAssistant, entry: ConfigEntry):
         if not entities:
             dev_reg.async_remove_device(old_device.id)
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> bool:
     """Unload integration."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    
-    if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id, None)
-    
+    if unload_ok and hasattr(entry, "runtime_data"):
+        await entry.runtime_data.tempo_coordinator.async_shutdown()
+        await entry.runtime_data.forecast_coordinator.async_shutdown()
+        await entry.runtime_data.price_coordinator.async_shutdown()
     return unload_ok
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
