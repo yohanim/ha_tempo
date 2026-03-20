@@ -6,7 +6,7 @@ import json
 
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_change, async_call_later
 from babel.dates import format_date, get_date_format
@@ -100,8 +100,9 @@ class ForecastCoordinator(DataUpdateCoordinator):
 
         except Exception as exc:
             _LOGGER.error("Open DPE: erreur lors de la mise à jour: %s", exc)
-            # raise UpdateFailed(f"Erreur mise à jour des prévisions Open DPE: {exc}")
             self._schedule_retry()
+            if not self._cached_data:
+                raise UpdateFailed("Open DPE forecast unavailable and no cached data available") from exc
             return self._cached_data
 
     async def async_shutdown(self) -> None:
