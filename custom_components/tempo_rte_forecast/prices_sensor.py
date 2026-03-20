@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
@@ -12,8 +11,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN, DEVICE_NAME, DEVICE_MANUFACTURER, DEVICE_MODEL, COLORS
 from .prices_coordinator import PriceCoordinator
 from .utils import get_icon_color, normalize_color
-
-_LOGGER = logging.getLogger(__name__)
 
 ATTRIBUTION = "Prix basés sur les options de l'intégration"
 

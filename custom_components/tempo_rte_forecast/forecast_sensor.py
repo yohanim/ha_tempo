@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 from dataclasses import asdict
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .utils import get_tempo_date, get_color_name, get_color_emoji, normalize_color, get_icon_color
+from .utils import get_tempo_date, normalize_color, get_icon_color
 from .const import (
     DOMAIN,
     DEVICE_MANUFACTURER,

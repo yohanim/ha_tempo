@@ -4,7 +4,6 @@ Copyright (C) 2025 Christophe Bansart
 """
 from __future__ import annotations
 
-import logging
 from typing import Any
 import voluptuous as vol
 
@@ -49,8 +48,6 @@ from .const import (
     DEFAULT_ICON_COLOR_RED,
     DEFAULT_ICON_COLOR_UNKNOWN,
 )
-
-_LOGGER = logging.getLogger(__name__)
 
 class OptionsFlowHandler(OptionsFlow):
     """Handle options flow."""
