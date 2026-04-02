@@ -135,10 +135,11 @@ class PriceCoordinator(DataUpdateCoordinator):
         await self.async_refresh()
 
     async def async_shutdown(self) -> None:
-        """Release scheduled listeners."""
+        """Release scheduled listeners and coordinator timers."""
         for remove_listener in self._scheduled_update_listeners:
             remove_listener()
         self._scheduled_update_listeners.clear()
+        await super().async_shutdown()
 
     async def _update_prices(self, _now: datetime | None = None) -> None:
         """Fetch and parse prices from data.gouv.fr."""

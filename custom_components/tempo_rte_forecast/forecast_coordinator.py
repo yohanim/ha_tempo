@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 import json
 
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_time_change, async_call_later
+from homeassistant.helpers.event import async_track_time_change
 from babel.dates import format_date, get_date_format
 
+from .coordinator_retry import RetryWhenNoUpdateIntervalMixin
 from .sensor_types import ForecastSensor, ForecastDayLight, ForecastDay
 from .const import (
     OPEN_DPE_LIGHT_URL,
@@ -25,7 +26,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-class ForecastCoordinator(DataUpdateCoordinator):
+class ForecastCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator):
     """Coordinator in charge of fetching Open-DPE forecasts."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
@@ -45,7 +46,6 @@ class ForecastCoordinator(DataUpdateCoordinator):
         self.tempo_data = {}
         self._cached_data = {}  # Cache pour garder les dernières données valides
         self._scheduled_listeners: list = []
-        self._retry_unsub = None
 
         # Daily update after 7h00 and 15h00 with auto-retry and cache
         self._scheduled_listeners.append(
@@ -68,28 +68,13 @@ class ForecastCoordinator(DataUpdateCoordinator):
         )
 
         _LOGGER.debug(
-            "ForecastCoordinator initialisé : refresh quotidien programmé à 07:00 + intervalle 6h"
+            "ForecastCoordinator initialisé : refresh programmé à 07:00 et 15:00"
         )
 
     async def _scheduled_refresh(self, now: datetime) -> None:
         """Update at 07:00 every day."""
         _LOGGER.debug("Open DPE: lancement du refresh programmé à %s", now.strftime("%Hh%M"))
         await self.async_refresh()
-
-    async def _async_retry_refresh(self, _now: datetime) -> None:
-        """Retry callback compatible with async_call_later."""
-        self._retry_unsub = None
-        await self.async_refresh()
-
-    def _schedule_retry(self) -> None:
-        """Schedule one retry refresh if not already planned."""
-        if self._retry_unsub is not None:
-            return
-        self._retry_unsub = async_call_later(
-            self.hass,
-            timedelta(minutes=self.retry_delay),
-            self._async_retry_refresh,
-        )
 
     async def _async_update_data(self) -> dict[str, ForecastSensor] | None:
         """Open DPE data recovery."""
@@ -99,21 +84,26 @@ class ForecastCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("Open DPE: %s jours récupérés", len(forecasts))
             return forecasts
 
+        except UpdateFailed:
+            raise
         except Exception as exc:
             _LOGGER.error("Open DPE: erreur lors de la mise à jour: %s", exc)
-            self._schedule_retry()
             if not self._cached_data:
-                raise UpdateFailed("Open DPE forecast unavailable and no cached data available") from exc
-            return self._cached_data
+                raise UpdateFailed(
+                    "Open DPE forecast unavailable and no cached data available",
+                    retry_after=float(self.retry_delay * 60),
+                ) from exc
+            raise UpdateFailed(
+                "Open DPE forecast failed; serving cached data",
+                retry_after=float(self.retry_delay * 60),
+            ) from exc
 
     async def async_shutdown(self) -> None:
-        """Release listeners and pending retry callbacks."""
+        """Release scheduled listeners and coordinator timers."""
         for remove_listener in self._scheduled_listeners:
             remove_listener()
         self._scheduled_listeners.clear()
-        if self._retry_unsub is not None:
-            self._retry_unsub()
-            self._retry_unsub = None
+        await super().async_shutdown()
 
     def get_data(self, date: str) -> ForecastSensor | None:
         if date in self.tempo_data:
@@ -198,8 +188,16 @@ async def async_fetch_opendpe_forecast(self: ForecastCoordinator) -> dict[str, F
         async with session.get(url, timeout=10) as response:
             if response.status != 200:
                 _LOGGER.error("Open-DPE: HTTP %s", response.status)
-                self._schedule_retry()
-                return self._cached_data
+                ra = float(self.retry_delay * 60)
+                if not self._cached_data:
+                    raise UpdateFailed(
+                        "Open DPE HTTP error and no cached data available",
+                        retry_after=ra,
+                    )
+                raise UpdateFailed(
+                    "Open DPE HTTP error; serving cached data",
+                    retry_after=ra,
+                )
 
             # Lire le contenu brut pour diagnostic
             response_text = await response.text()
@@ -211,7 +209,17 @@ async def async_fetch_opendpe_forecast(self: ForecastCoordinator) -> dict[str, F
 
             return forecasts
 
+    except UpdateFailed:
+        raise
     except Exception as exc:
         _LOGGER.error("Open DPE: erreur lors de la récupération JSON : %s", exc)
-        self._schedule_retry()
-        return self._cached_data
+        ra = float(self.retry_delay * 60)
+        if not self._cached_data:
+            raise UpdateFailed(
+                "Open DPE forecast unavailable and no cached data available",
+                retry_after=ra,
+            ) from exc
+        raise UpdateFailed(
+            "Open DPE forecast fetch failed; serving cached data",
+            retry_after=ra,
+        ) from exc

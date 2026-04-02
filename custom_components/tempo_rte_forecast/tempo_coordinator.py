@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta, time
+from datetime import date, datetime, time
 from typing import Any
 import aiohttp
-import asyncio
 import async_timeout
 import json
 
@@ -12,9 +11,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_time_change, async_call_later
+from homeassistant.helpers.event import async_track_time_change
 from homeassistant.util import dt as dt_util
 
+from .coordinator_retry import RetryWhenNoUpdateIntervalMixin
 from .const import (
     TEMPO_DAY_CHANGE_TIME,
     RTE_API_URL,
@@ -32,7 +32,7 @@ from .utils import get_tempo_date, get_tempo_season
 
 _LOGGER = logging.getLogger(__name__)
 
-class TempoDataCoordinator(DataUpdateCoordinator):
+class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator):
     """Coordinateur pour récupérer les données RTE Tempo."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -57,7 +57,6 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         self._last_api_call = None
         self._data_fetched_today = False
         self._scheduled_listeners: list = []
-        self._retry_unsub = None
         
         # Utilisation d'une session partagée. La vérification SSL est activée par défaut.
         self.session = async_get_clientsession(hass)
@@ -126,21 +125,6 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         
         # Force la mise à jour des entités (sans appel API)
         self.async_set_updated_data(self.tempo_data)
-
-    async def _async_retry_refresh(self, _now: datetime) -> None:
-        """Retry callback compatible with async_call_later."""
-        self._retry_unsub = None
-        await self.async_refresh()
-
-    def _schedule_retry(self) -> None:
-        """Schedule one retry refresh if not already planned."""
-        if self._retry_unsub is not None:
-            return
-        self._retry_unsub = async_call_later(
-            self.hass,
-            timedelta(minutes=self.retry_delay),
-            self._async_retry_refresh,
-        )
 
     def _validate_and_cache_data(self, new_data: dict[str, Any]) -> bool:
         """Valide les nouvelles données et met à jour le cache si valides."""
@@ -219,7 +203,7 @@ class TempoDataCoordinator(DataUpdateCoordinator):
                         _LOGGER.error("[API] Contenu reçu: %s", response_text[:1000])
                         return None
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             _LOGGER.error("[API] Timeout (15s) lors de la récupération des données")
             return None
         except aiohttp.ClientError as err:
@@ -276,20 +260,24 @@ class TempoDataCoordinator(DataUpdateCoordinator):
         else:
             _LOGGER.warning("[API] Aucune donnée valide récupérée (ni Light, ni Full)")
 
-        # Si on arrive ici, c'est un échec : on planifie un retry
-        self._schedule_retry()
+        # Échec sans cache
         if not self._cached_data:
-            raise UpdateFailed("RTE Tempo API unavailable and no cached data available")
-        return self._cached_data
+            raise UpdateFailed(
+                "RTE Tempo API unavailable and no cached data available",
+                retry_after=float(self.retry_delay * 60),
+            )
+        # Cache encore exploitable : échec de mise à jour (last_update_success=False) + retry_after
+        raise UpdateFailed(
+            "RTE Tempo API failed; serving cached data",
+            retry_after=float(self.retry_delay * 60),
+        )
 
     async def async_shutdown(self) -> None:
-        """Release listeners and pending retry callbacks."""
+        """Release scheduled listeners and coordinator timers."""
         for remove_listener in self._scheduled_listeners:
             remove_listener()
         self._scheduled_listeners.clear()
-        if self._retry_unsub is not None:
-            self._retry_unsub()
-            self._retry_unsub = None
+        await super().async_shutdown()
 
     def get_data(self, date: str) -> str | None:
         if date in self.tempo_data:

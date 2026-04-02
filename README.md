@@ -66,6 +66,16 @@ Information is distributed across different sensors for clarity.
 - `rte_status`: Status from RTE.
 - `forecast_status`: Status from Open-DPE.
 
+### Naming in templates (Home Assistant 2026.4+)
+
+From Core **2026.4**, templates can use **`entity_name()`** to resolve an entity’s display name reliably (recommended over reading the `friendly_name` attribute in new dashboards and automations). Example:
+
+```jinja
+{{ entity_name('sensor.current_price') }}
+```
+
+See the [release notes](https://www.home-assistant.io/latest-release-notes/) (section *Other noteworthy changes* → `entity_name`). For translated **attribute** values (modes, presets, etc.), **`state_attr_translated()`** is also available when applicable.
+
 ---
 
 ## 🤖 Automation Examples (Simplified)
@@ -159,14 +169,16 @@ template:
 ```
 
 ### 6. UI Markdown Card
+Uses **`entity_name()`** for section titles (HA 2026.4+); state and attributes stay the same.
+
 ```yaml
 type: markdown
 content: |
-  ## Tempo Today
+  ## {{ entity_name('sensor.tempo_color_j') }}
   Color: **{{ states('sensor.tempo_color_j') }} {{ state_attr('sensor.tempo_color_j', 'color_emoji') }}**
   Period: **{{ state_attr('sensor.current_price', 'current_period') }}**
 
-  ## Tempo Tomorrow
+  ## {{ entity_name('sensor.tempo_color_j1_combined') }}
   Color: **{{ states('sensor.tempo_color_j1_combined') }} {{ state_attr('sensor.tempo_color_j1_combined', 'color_emoji') }}**
 ```
 
@@ -243,6 +255,16 @@ Les informations sont réparties sur les différents capteurs pour plus de clart
 - `active_source`: "RTE" ou "OpenDPE".
 - `rte_status`: État venant de RTE.
 - `forecast_status`: État venant d'Open-DPE.
+
+### Noms dans les templates (Home Assistant 2026.4+)
+
+Depuis le Core **2026.4**, les templates peuvent utiliser **`entity_name()`** pour obtenir le nom affiché d’une entité de façon fiable (recommandé plutôt que l’attribut `friendly_name` dans les nouveaux tableaux de bord et automatisations). Exemple :
+
+```jinja
+{{ entity_name('sensor.current_price') }}
+```
+
+Voir les [notes de version](https://www.home-assistant.io/latest-release-notes/) (section *Other noteworthy changes* → `entity_name`). Pour des **attributs** traduits (modes, préréglages, etc.), **`state_attr_translated()`** est disponible lorsque c’est pertinent.
 
 ---
 
@@ -337,14 +359,16 @@ template:
 ```
 
 ### 6. Carte Markdown pour l'interface
+Utilise **`entity_name()`** pour les titres de section (HA 2026.4+) ; l’état et les attributs restent identiques.
+
 ```yaml
 type: markdown
 content: |
-  ## Tempo Aujourd'hui
+  ## {{ entity_name('sensor.tempo_color_j') }}
   Couleur : **{{ states('sensor.tempo_color_j') }} {{ state_attr('sensor.tempo_color_j', 'color_emoji') }}**
   Période : **{{ state_attr('sensor.current_price', 'current_period') }}**
 
-  ## Tempo Demain
+  ## {{ entity_name('sensor.tempo_color_j1_combined') }}
   Couleur : **{{ states('sensor.tempo_color_j1_combined') }} {{ state_attr('sensor.tempo_color_j1_combined', 'color_emoji') }}**
 ```
 

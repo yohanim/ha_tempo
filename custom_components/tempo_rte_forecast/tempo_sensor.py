@@ -164,6 +164,15 @@ class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
         )
 
     @property
+    def available(self) -> bool:
+        """RTE or Open-DPE may be in error while the other still has stale data."""
+        day = get_tempo_date(1, self.tempo_day_change_time_str)
+        return (
+            self.coordinator.get_data(day) is not None
+            or self.forecast_coordinator.get_data(day) is not None
+        )
+
+    @property
     def native_value(self) -> str:
         day = get_tempo_date(1, self.tempo_day_change_time_str)
 
