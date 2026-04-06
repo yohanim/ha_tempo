@@ -12,6 +12,17 @@ refresh (``last_update_success`` false) does not hide stale-but-valid data.
 from __future__ import annotations
 
 from homeassistant.core import callback
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+
+def _coordinator_wrap_handle_refresh(coordinator: DataUpdateCoordinator):
+    """Bound callback for DataUpdateCoordinator.__wrap_handle_refresh_interval.
+
+    ``self.__wrap_handle_refresh_interval`` cannot be used inside this mixin: Python
+    would mangle it to ``_RetryWhenNoUpdateIntervalMixin__...`` instead of the
+    real ``_DataUpdateCoordinator__wrap_handle_refresh_interval`` on the instance.
+    """
+    return getattr(coordinator, "_DataUpdateCoordinator__wrap_handle_refresh_interval")
 
 
 class RetryWhenNoUpdateIntervalMixin:
@@ -35,6 +46,5 @@ class RetryWhenNoUpdateIntervalMixin:
         update_interval = self._retry_after
         self._retry_after = None
         next_refresh = int(loop.time()) + self._microsecond + update_interval
-        self._unsub_refresh = loop.call_at(
-            next_refresh, self.__wrap_handle_refresh_interval
-        ).cancel
+        wrap = _coordinator_wrap_handle_refresh(self)
+        self._unsub_refresh = loop.call_at(next_refresh, wrap).cancel
