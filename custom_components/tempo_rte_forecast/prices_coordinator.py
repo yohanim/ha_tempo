@@ -141,10 +141,12 @@ class PriceCoordinator(DataUpdateCoordinator):
         self._scheduled_update_listeners.clear()
         await super().async_shutdown()
 
-    async def _update_prices(self, _now: datetime | None = None) -> None:
+    async def _update_prices(
+        self, _now: datetime | None = None, *, force: bool = False
+    ) -> None:
         """Fetch and parse prices from data.gouv.fr."""
         # Check if update is needed based on interval
-        if self._last_price_update:
+        if not force and self._last_price_update:
             # Ensure interval is at least 1
             interval = max(1, self._price_update_interval)
             days_since_last_update = (dt_util.now() - self._last_price_update).days

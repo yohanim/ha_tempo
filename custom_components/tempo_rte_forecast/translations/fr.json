@@ -119,5 +119,11 @@
         "name": "Prix {period} {color}"
       }
     }
+  },
+  "services": {
+    "refresh": {
+      "name": "Rafraîchir les données",
+      "description": "Relance immédiatement les appels Open-DPE, RTE Tempo et grilles de prix (sans recharger l'intégration)."
+    }
   }
 }

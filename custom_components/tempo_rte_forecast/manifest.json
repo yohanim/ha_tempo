@@ -10,5 +10,5 @@
   "issue_tracker": "https://github.com/yohanim/ha_tempo/issues",
   "quality_scale": "silver",
   "requirements": ["babel"],
-  "version": "2.2.3"
+  "version": "2.2.4"
 }

@@ -7,8 +7,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+import voluptuous as vol
+
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import device_registry as dr
@@ -23,6 +25,59 @@ from .tempo_coordinator import TempoDataCoordinator
 PLATFORMS = ["sensor"]
 
 _LOGGER = logging.getLogger(__name__)
+
+DATA_REFRESH_SERVICE_REGISTERED = "refresh_service_registered"
+
+
+async def _async_ensure_refresh_service(hass: HomeAssistant) -> None:
+    """Register tempo_rte_forecast.refresh once (manual API re-fetch)."""
+    reg = hass.data.setdefault(DOMAIN, {})
+    if reg.get(DATA_REFRESH_SERVICE_REGISTERED):
+        return
+
+    async def async_handle_refresh(_call: ServiceCall) -> None:
+        for ent in hass.config_entries.async_entries(DOMAIN):
+            if ent.state != ConfigEntryState.LOADED:
+                continue
+            runtime = ent.runtime_data
+            if runtime is None:
+                continue
+            title = ent.title
+            try:
+                await runtime.forecast_coordinator.async_refresh()
+            except Exception as err:
+                _LOGGER.warning("%s: manual forecast refresh failed: %s", title, err)
+            try:
+                await runtime.tempo_coordinator.async_refresh()
+            except Exception as err:
+                _LOGGER.warning("%s: manual Tempo refresh failed: %s", title, err)
+            try:
+                await runtime.price_coordinator._update_prices(force=True)
+                await runtime.price_coordinator.async_refresh()
+            except Exception as err:
+                _LOGGER.warning("%s: manual price refresh failed: %s", title, err)
+
+    hass.services.async_register(
+        DOMAIN,
+        "refresh",
+        async_handle_refresh,
+        schema=vol.Schema({}),
+    )
+    reg[DATA_REFRESH_SERVICE_REGISTERED] = True
+
+
+def _remove_refresh_service_if_last(hass: HomeAssistant, unloaded_entry_id: str) -> None:
+    """Unregister the service when no loaded config entries remain."""
+    others = [
+        e
+        for e in hass.config_entries.async_entries(DOMAIN)
+        if e.state == ConfigEntryState.LOADED
+        and e.entry_id != unloaded_entry_id
+    ]
+    if others:
+        return
+    hass.services.async_remove(DOMAIN, "refresh")
+    hass.data.get(DOMAIN, {}).pop(DATA_REFRESH_SERVICE_REGISTERED, None)
 
 
 @dataclass
@@ -84,6 +139,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> boo
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    await _async_ensure_refresh_service(hass)
+
     return True
 
 async def _async_migrate_unique_ids(hass: HomeAssistant, entry: ConfigEntry):
@@ -130,11 +187,14 @@ async def _async_cleanup_devices(hass: HomeAssistant, entry: ConfigEntry):
 
 async def async_unload_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> bool:
     """Unload integration."""
+    entry_id = entry.entry_id
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok and hasattr(entry, "runtime_data"):
         await entry.runtime_data.tempo_coordinator.async_shutdown()
         await entry.runtime_data.forecast_coordinator.async_shutdown()
         await entry.runtime_data.price_coordinator.async_shutdown()
+    if unload_ok:
+        _remove_refresh_service_if_last(hass, entry_id)
     return unload_ok
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:

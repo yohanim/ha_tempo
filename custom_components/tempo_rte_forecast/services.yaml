@@ -1,0 +1,5 @@
+refresh:
+  name: Refresh data
+  description: >-
+    Immediately re-fetch Open-DPE forecast, RTE Tempo colors, and price grids
+    (without reloading the integration).
