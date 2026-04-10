@@ -31,7 +31,14 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: TempoDataCoordinator, index: int, entry: ConfigEntry) -> None:
+    def __init__(
+        self,
+        coordinator: TempoDataCoordinator,
+        index: int,
+        entry: ConfigEntry,
+        *,
+        forecast_coordinator: ForecastCoordinator | None = None,
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
 
@@ -39,10 +46,33 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         self.tempo_day_change_time_str = entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
         self._attr_unique_id = f"{entry.entry_id}_J{'' if (index == 0) else '+1'}"
         self._last_state = None
+        self._forecast_coordinator = forecast_coordinator
 
         # J (index 0) uses tempo_color (calendar-today)
         # J+1 (index 1) uses tempo_color_j1 (calendar)
         self._attr_translation_key = "tempo_color" if index == 0 else "tempo_color_j1"
+
+    async def async_added_to_hass(self) -> None:
+        """Also listen to Open-DPE when RTE has no color for this calendar day."""
+        await super().async_added_to_hass()
+        if self._forecast_coordinator is not None:
+            self.async_on_remove(
+                self._forecast_coordinator.async_add_listener(
+                    self._handle_coordinator_update
+                )
+            )
+
+    def _effective_color_raw(self) -> str | None:
+        """RTE value if present; else Open-DPE row for the same Tempo calendar day if any."""
+        day = get_tempo_date(self.index, self.tempo_day_change_time_str)
+        rte = self.coordinator.get_data(day)
+        if rte is not None:
+            return rte
+        if self._forecast_coordinator is not None:
+            fd = self._forecast_coordinator.get_data(day)
+            if fd and fd.color:
+                return fd.color
+        return None
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -61,25 +91,17 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        """Sensor is available if data is in cache."""
-        if self.index == 1:
-            return True
-
-        day = get_tempo_date(self.index, self.tempo_day_change_time_str)
-        day_data = self.coordinator.get_data(day)
-        return day_data is not None
+        """Always available: real color from RTE/forecast, or explicit ``unknown`` (retries unchanged)."""
+        return True
 
     @property
     def native_value(self) -> str:
         """Return the current state."""
-        day = get_tempo_date(self.index, self.tempo_day_change_time_str)
-        day_data = self.coordinator.get_data(day)
-        
-        state = normalize_color(day_data)
+        state = normalize_color(self._effective_color_raw())
 
         if state != self._last_state and self._last_state is not None:
             _LOGGER.info("State change: %s -> %s", self._last_state, state)
-        
+
         self._last_state = state
         return state
 
@@ -88,21 +110,30 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         """Detailed entity attributes."""
         day = get_tempo_date(self.index, self.tempo_day_change_time_str)
         day_data = self.coordinator.get_data(day)
-        
-        color_key = normalize_color(day_data)
-        icon_color = get_icon_color(self.coordinator.entry.options, color_key)
 
-        day_color_code = COLORS[color_key]["code"]
-        day_color = COLORS[color_key]["name"]
-        day_color_en = COLORS[color_key]["name_en"]
-        day_color_emoji = COLORS[color_key]["emoji"]
-        
-        if day_data is None:
-            data_source = "none"
-        elif day in self.coordinator.tempo_data:
-            data_source = "api"
+        if day_data is not None:
+            color_key = normalize_color(day_data)
+            if day in self.coordinator.tempo_data:
+                data_source = "api"
+            else:
+                data_source = "cache"
+        elif (
+            self._forecast_coordinator is not None
+            and (fd := self._forecast_coordinator.get_data(day))
+            and fd.color
+        ):
+            color_key = normalize_color(fd.color)
+            data_source = "opendpe"
         else:
-            data_source = "cache"
+            color_key = "unknown"
+            data_source = "none"
+
+        meta = COLORS.get(color_key, COLORS["unknown"])
+        day_color_code = meta["code"]
+        day_color = meta["name"]
+        day_color_en = meta["name_en"]
+        day_color_emoji = meta["emoji"]
+        icon_color = get_icon_color(self.coordinator.entry.options, color_key)
 
         attributes = {
             "date": day,
@@ -117,7 +148,6 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
             "data_source": data_source,
         }
 
-        # Add J+1 specific attributes for easier automation
         if self.index == 1:
             attributes["tomorrow_is_blue"] = color_key == "blue"
             attributes["tomorrow_is_white"] = color_key == "white"

@@ -184,11 +184,19 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
 
                     if response.status != 200:
                         response_text = await response.text()
-                        _LOGGER.error(
-                            "[API] Erreur HTTP %s - Réponse: %s",
-                            response.status,
-                            response_text[:500]
-                        )
+                        snippet = response_text[:500]
+                        if response.status >= 500:
+                            _LOGGER.warning(
+                                "[API] HTTP %s (service may be in maintenance) — %s",
+                                response.status,
+                                snippet,
+                            )
+                        else:
+                            _LOGGER.error(
+                                "[API] Erreur HTTP %s - Réponse: %s",
+                                response.status,
+                                snippet,
+                            )
                         return None
 
                     # Lire le contenu brut pour diagnostic

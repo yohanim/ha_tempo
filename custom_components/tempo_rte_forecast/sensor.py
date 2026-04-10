@@ -24,7 +24,22 @@ async def async_setup_entry(
     forecast_coordinator = entry.runtime_data.forecast_coordinator
     price_coordinator = entry.runtime_data.price_coordinator
 
-    async_add_entities([TempoSensor(coordinator, 0, entry), TempoSensor(coordinator, 1, entry)])
+    async_add_entities(
+        [
+            TempoSensor(
+                coordinator,
+                0,
+                entry,
+                forecast_coordinator=forecast_coordinator,
+            ),
+            TempoSensor(
+                coordinator,
+                1,
+                entry,
+                forecast_coordinator=forecast_coordinator,
+            ),
+        ]
+    )
 
     # Add forecast sensors from Open DPE
     NUM_FORECAST_DAYS = 9  # J+1 to J+9

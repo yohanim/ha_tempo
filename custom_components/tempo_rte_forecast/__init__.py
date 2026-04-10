@@ -5,9 +5,11 @@ Copyright (C) 2025 Christophe Bansart
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import device_registry as dr
 
@@ -19,6 +21,8 @@ from .prices_coordinator import PriceCoordinator
 from .tempo_coordinator import TempoDataCoordinator
 
 PLATFORMS = ["sensor"]
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
@@ -42,13 +46,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> boo
     await _async_cleanup_devices(hass, entry)
 
     tempo_coordinator = TempoDataCoordinator(hass, entry)
-    await tempo_coordinator.async_config_entry_first_refresh()
-
     forecast_coordinator = ForecastCoordinator(hass, entry)
-    await forecast_coordinator.async_config_entry_first_refresh()
+
+    # Forecast first so Open-DPE data exists if RTE is down (maintenance, etc.).
+    try:
+        await forecast_coordinator.async_config_entry_first_refresh()
+    except ConfigEntryNotReady:
+        _LOGGER.warning(
+            "Open-DPE forecast not ready at startup; continuing. "
+            "Forecast entities may be unavailable until the next refresh."
+        )
+
+    try:
+        await tempo_coordinator.async_config_entry_first_refresh()
+    except ConfigEntryNotReady:
+        _LOGGER.warning(
+            "RTE Tempo not ready at startup; continuing. "
+            "RTE-backed entities may be unavailable until the API recovers."
+        )
 
     price_coordinator = PriceCoordinator(hass, entry, tempo_coordinator)
-    await price_coordinator.async_config_entry_first_refresh()
+    try:
+        await price_coordinator.async_config_entry_first_refresh()
+    except ConfigEntryNotReady:
+        _LOGGER.warning(
+            "Price coordinator not ready at startup; continuing."
+        )
 
     entry.runtime_data = TempoRuntimeData(
         tempo_coordinator=tempo_coordinator,
