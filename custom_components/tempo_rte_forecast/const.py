@@ -3,6 +3,9 @@ DOMAIN = "tempo_rte_forecast"
 DEVICE_NAME = "Tempo RTE & Open DPE Forecast"
 RTE_API_URL = "https://www.services-rte.com/cms/open_data/v1/tempoLight"
 RTE_API_FULL_URL = "https://www.services-rte.com/cms/open_data/v1/tempo?season={season}"
+# Third-party buffer (RTE-sourced); used after tempoLight, before RTE Full if days still missing.
+# Docs: https://www.api-couleur-tempo.fr/api
+COULEUR_TEMPO_API_BASE = "https://www.api-couleur-tempo.fr"
 OPEN_DPE_LIGHT_URL = "https://open-dpe.fr/assets/tempo_days_lite.json"
 OPEN_DPE_FULL_URL = "https://open-dpe.fr/assets/tempo_days.json"
 COLORS = {

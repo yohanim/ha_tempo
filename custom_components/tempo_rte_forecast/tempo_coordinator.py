@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime, time
+from collections.abc import Sequence
 from typing import Any
 import aiohttp
 import async_timeout
@@ -19,6 +20,7 @@ from .const import (
     TEMPO_DAY_CHANGE_TIME,
     RTE_API_URL,
     RTE_API_FULL_URL,
+    COULEUR_TEMPO_API_BASE,
     COLORS,
     TEMPO_RETRY_DELAY_MINUTES,
     CONF_TEMPO_DAY_CHANGE_TIME,
@@ -171,80 +173,175 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
         self.tempo_data = normalized_data
         return True
 
-    async def _fetch_rte_data(self, url: str) -> dict[str, Any] | None:
-        """Récupère les données JSON depuis une URL RTE donnée."""
+    async def _fetch_json_url(
+        self,
+        url: str,
+        log_prefix: str,
+        *,
+        params: Sequence[tuple[str, str]] | None = None,
+    ) -> dict[str, Any] | list[Any] | None:
+        """GET JSON générique (RTE ou api-couleur-tempo.fr)."""
         now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
-        _LOGGER.debug("[API] Appel API à %s - URL: %s", now.strftime('%H:%M:%S'), url)
+        _LOGGER.debug(
+            "%s Appel à %s — URL: %s params=%s",
+            log_prefix,
+            now.strftime("%H:%M:%S"),
+            url,
+            params,
+        )
 
         try:
             async with async_timeout.timeout(15):
-                async with self.session.get(url) as response:
-                    _LOGGER.debug("[API] Status HTTP: %s", response.status)
-                    _LOGGER.debug("[API] Headers: %s", dict(response.headers))
+                async with self.session.get(url, params=params) as response:
+                    _LOGGER.debug("%s Status HTTP: %s", log_prefix, response.status)
 
                     if response.status != 200:
                         response_text = await response.text()
                         snippet = response_text[:500]
                         if response.status >= 500:
                             _LOGGER.warning(
-                                "[API] HTTP %s (service may be in maintenance) — %s",
+                                "%s HTTP %s (service may be in maintenance) — %s",
+                                log_prefix,
                                 response.status,
                                 snippet,
                             )
                         else:
                             _LOGGER.error(
-                                "[API] Erreur HTTP %s - Réponse: %s",
+                                "%s Erreur HTTP %s — %s",
+                                log_prefix,
                                 response.status,
                                 snippet,
                             )
                         return None
 
-                    # Lire le contenu brut pour diagnostic
                     response_text = await response.text()
-                    _LOGGER.debug("[API] Réponse brute (500 premiers chars): %s", response_text[:500])
+                    _LOGGER.debug("%s Réponse (500 premiers chars): %s", log_prefix, response_text[:500])
 
                     try:
                         data = json.loads(response_text)
                         return data
                     except json.JSONDecodeError as json_err:
-                        _LOGGER.error("[API] Erreur parsing JSON: %s", json_err)
-                        _LOGGER.error("[API] Contenu reçu: %s", response_text[:1000])
+                        _LOGGER.error("%s Erreur parsing JSON: %s", log_prefix, json_err)
+                        _LOGGER.error("%s Contenu: %s", log_prefix, response_text[:1000])
                         return None
 
         except TimeoutError:
-            _LOGGER.error("[API] Timeout (15s) lors de la récupération des données")
+            _LOGGER.error("%s Timeout (15s)", log_prefix)
             return None
         except aiohttp.ClientError as err:
-            _LOGGER.error("[API] Erreur de connexion: %s", err)
+            _LOGGER.error("%s Erreur de connexion: %s", log_prefix, err)
             return None
         except Exception as err:
-            _LOGGER.error("[API] Erreur inattendue: %s", err, exc_info=True)
+            _LOGGER.error("%s Erreur inattendue: %s", log_prefix, err, exc_info=True)
             return None
+
+    async def _fetch_rte_data(self, url: str) -> dict[str, Any] | None:
+        """Récupère les données JSON depuis une URL RTE donnée."""
+        raw = await self._fetch_json_url(url, "[RTE]")
+        if raw is None or isinstance(raw, list):
+            return None
+        return raw
+
+    @staticmethod
+    def _day_needs_couleur_tempo_fill(values: dict[str, Any], day: str) -> bool:
+        """True si la date n'a pas encore une couleur bleu/blanc/rouge exploitable."""
+        raw = values.get(day)
+        if raw is None:
+            return True
+        if not isinstance(raw, str):
+            return True
+        k = raw.strip().lower()
+        return k not in ("blue", "white", "red")
+
+    @staticmethod
+    def _couleur_tempo_payload_to_color_key(payload: dict[str, Any] | None) -> str | None:
+        """Mappe la réponse JourTempo (api-couleur-tempo.fr) vers blue/white/red."""
+        if not payload:
+            return None
+        code = payload.get("codeJour")
+        if code in (1, 2, 3):
+            return {1: "blue", 2: "white", 3: "red"}[code]
+        if code == 0:
+            return None
+        lib = (payload.get("libCouleur") or "").strip().lower()
+        mapping = {"bleu": "blue", "blanc": "white", "rouge": "red"}
+        return mapping.get(lib)
+
+    async def _apply_couleur_tempo_buffer(
+        self, values: dict[str, Any], today: str, tomorrow: str
+    ) -> None:
+        """Complète J / J+1 via GET /api/joursTempo?dateJour[]=… (une requête pour toutes les dates manquantes)."""
+        missing = [
+            d
+            for d in (today, tomorrow)
+            if self._day_needs_couleur_tempo_fill(values, d)
+        ]
+        if not missing:
+            return
+
+        batch_url = f"{COULEUR_TEMPO_API_BASE}/api/joursTempo"
+        query_params: list[tuple[str, str]] = [("dateJour[]", d) for d in missing]
+        raw = await self._fetch_json_url(
+            batch_url, "[CouleurTempo]", params=query_params
+        )
+        if raw is None:
+            return
+        if not isinstance(raw, list):
+            _LOGGER.warning(
+                "[CouleurTempo] Réponse /api/joursTempo inattendue (type %s)",
+                type(raw).__name__,
+            )
+            return
+
+        missing_set = set(missing)
+        for payload in raw:
+            if not isinstance(payload, dict):
+                continue
+            day = payload.get("dateJour")
+            if not isinstance(day, str) or day not in missing_set:
+                continue
+            color = self._couleur_tempo_payload_to_color_key(payload)
+            if not color:
+                _LOGGER.debug(
+                    "[CouleurTempo] Pas de couleur exploitable pour %s (code 0 / indispo)",
+                    day,
+                )
+                continue
+            values[day] = color
+            _LOGGER.info("[CouleurTempo] Complément pour %s: %s", day, color)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Récupération des données depuis l'API RTE (tempoLight) avec fallback."""
         today = get_tempo_date(0, self.tempo_day_change_time_str)
-        
-        # 1. Tentative avec l'API Light (standard)
-        data = await self._fetch_rte_data(RTE_API_URL)
-        values = data.get("values", {}) if data else {}
-        if not isinstance(values, dict):
-            values = {}
+        tomorrow = get_tempo_date(1, self.tempo_day_change_time_str)
 
-        # 2. Si pas de valeur pour aujourd'hui, tentative avec l'API Full
-        # (On n'appelle pas l'API Full si c'est juste demain qui manque)
-        if today not in values:
-            _LOGGER.info("Données incomplètes (J manquante) sur l'API Light, tentative sur l'API Full")
+        # 1. API RTE tempoLight
+        data = await self._fetch_rte_data(RTE_API_URL)
+        values: dict[str, Any] = {}
+        if data:
+            v = data.get("values", {})
+            if isinstance(v, dict):
+                values = dict(v)
+
+        # 2. Tampon api-couleur-tempo.fr (données RTE agrégées) pour J / J+1 manquants
+        await self._apply_couleur_tempo_buffer(values, today, tomorrow)
+
+        # 3. Dernier recours : calendrier saison API Full RTE
+        if self._day_needs_couleur_tempo_fill(values, today) or self._day_needs_couleur_tempo_fill(
+            values, tomorrow
+        ):
+            _LOGGER.info(
+                "Données encore incomplètes après api-couleur-tempo, tentative API Full RTE"
+            )
             today_dt = date.fromisoformat(today)
             season = get_tempo_season(today_dt)
             data_full = await self._fetch_rte_data(RTE_API_FULL_URL.format(season=season))
             if data_full:
                 values_full = data_full.get("values", {})
-                # On prend les données Full si elles existent
                 if isinstance(values_full, dict) and values_full:
                     values = values_full
 
-        # 3. Traitement des données récupérées (Light ou Full)
+        # 4. Traitement des données récupérées (Light, tampon, ou Full)
         if values:
             # Log de diagnostic
             _LOGGER.debug("[API] Nombre d'entrées dans 'values': %s", len(values))
@@ -256,7 +353,6 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
             if self._validate_and_cache_data(values):
                 self._data_fetched_today = True
 
-                tomorrow = get_tempo_date(1, self.tempo_day_change_time_str)
                 _LOGGER.info(
                     "✓ Données Tempo récupérées: J=%s (%s), J+1=%s (%s)", 
                     today, self.tempo_data[today], 
