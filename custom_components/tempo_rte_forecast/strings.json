@@ -4,10 +4,15 @@
       "user": {
         "title": "Tempo RTE Configuration",
         "description": "Integration for RTE Tempo colors, forecasts and electricity prices."
+      },
+      "reconfigure": {
+        "title": "Reconfigure Tempo RTE",
+        "description": "All settings are managed via the integration options (gear icon). Click Submit to confirm."
       }
     },
     "abort": {
-      "already_configured": "Device is already configured"
+      "already_configured": "Device is already configured",
+      "reconfigure_successful": "Re-configuration was successful"
     }
   },
   "options": {

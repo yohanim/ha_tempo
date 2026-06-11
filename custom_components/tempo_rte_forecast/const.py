@@ -1,6 +1,9 @@
 """Constants for the EDF Tempo integration."""
 DOMAIN = "tempo_rte_forecast"
 DEVICE_NAME = "Tempo RTE & Open DPE Forecast"
+TEMPO_TIMEZONE = "Europe/Paris"
+NUM_FORECAST_DAYS = 9
+
 RTE_API_URL = "https://www.services-rte.com/cms/open_data/v1/tempoLight"
 RTE_API_FULL_URL = "https://www.services-rte.com/cms/open_data/v1/tempo?season={season}"
 # Third-party buffer (RTE-sourced); used after tempoLight, before RTE Full if days still missing.
@@ -14,6 +17,7 @@ COLORS = {
     "red": {"code": 3, "name": "Rouge", "name_en": "red","emoji":"🔴"},
     "unknown": {"code": 0, "name": "Inconnu", "name_en": "unknown", "emoji":"❓"},
 }
+
 
 ICON_COLORS = {
     "blue": "blue",
@@ -32,26 +36,14 @@ DEFAULT_ICON_COLOR_WHITE = "white"
 DEFAULT_ICON_COLOR_RED = "red"
 DEFAULT_ICON_COLOR_UNKNOWN = "yellow"
 
-# SENSOR_COLOR_BLUE_EMOJI = COLORS["BLUE"]["emoji"]
-# SENSOR_COLOR_WHITE_EMOJI = COLORS["WHITE"]["emoji"]
-# SENSOR_COLOR_RED_EMOJI = COLORS["RED"]["emoji"]
-# SENSOR_COLOR_UNKNOWN_EMOJI = COLORS["inconnu"]["emoji"]
-# SENSOR_COLOR_BLUE_NAME = COLORS["BLUE"]["name"]
-# SENSOR_COLOR_WHITE_NAME = COLORS["WHITE"]["name"]
-# SENSOR_COLOR_RED_NAME = COLORS["RED"]["name"]
-# SENSOR_COLOR_UNKNOWN_NAME = COLORS["inconnu"]["name"]
-
 TEMPO_DAY_CHANGE_TIME = "06:00:00"
 HC_HOUR = 22
 
 TEMPO_RETRY_DELAY_MINUTES = 30
 FORECAST_RETRY_DELAY_MINUTES = 5
 
-# For forecast
 DEVICE_MANUFACTURER = "RTE"
 DEVICE_MODEL = "Calendrier Tempo"
-
-# DAYS_FR = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.']
 
 CONF_TEMPO_DAY_CHANGE_TIME = "tempo_day_change_time"
 CONF_TEMPO_RETRY_DELAY = "tempo_retry_delay_minutes"
@@ -64,8 +56,6 @@ DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME = "07:05:00"
 CONF_EDF_TEMPO_COLOR_REFRESH_TIME = "edf_tempo_color_refresh_time"
 DEFAULT_EDF_TEMPO_COLOR_REFRESH_TIME = "11:05:00"
 
-# For tariffs
-# For prices
 CONF_CONTRACT = "contract"
 CONTRACT_BASE = "base"
 CONTRACT_HEURES_CREUSES = "heures_creuses"

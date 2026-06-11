@@ -154,6 +154,25 @@ def test_services_refresh_key(strings: dict, fr_strings: dict) -> None:
     assert set(strings["services"]) == set(fr_strings["services"])
 
 
+def test_config_steps_include_reconfigure(strings: dict, fr_strings: dict) -> None:
+    """Both files must expose the reconfigure step added for Silver quality."""
+    assert "reconfigure" in strings["config"]["step"]
+    assert "reconfigure" in fr_strings["config"]["step"]
+    # The step must have at least a title and description
+    for lang_strings in (strings, fr_strings):
+        step = lang_strings["config"]["step"]["reconfigure"]
+        assert "title" in step
+        assert "description" in step
+
+
+def test_config_abort_keys(strings: dict, fr_strings: dict) -> None:
+    """Both files must carry the standard abort keys, including reconfigure_successful."""
+    expected = {"already_configured", "reconfigure_successful"}
+    assert expected <= set(strings["config"]["abort"])
+    assert expected <= set(fr_strings["config"]["abort"])
+    assert set(strings["config"]["abort"]) == set(fr_strings["config"]["abort"])
+
+
 def test_localized_color_label_fr_and_en() -> None:
     assert localized_color_label("blue", "fr") == "Bleu"
     assert localized_color_label("blue", "en") == "blue"

@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta, time
 import logging
 from homeassistant.util import dt as dt_util
 from .const import (
+    TEMPO_TIMEZONE,
     TEMPO_DAY_CHANGE_TIME,
     COLORS,
     CONF_ICON_COLOR_BLUE,
@@ -24,7 +25,7 @@ def get_tempo_date(offset_days: int = 0, tempo_day_change_time_str: str = TEMPO_
     Retourne la date Tempo (en tenant compte de l'heure de changement).
     offset_days: 0 pour J, 1 pour J+1
     """
-    now = dt_util.now(dt_util.get_time_zone("Europe/Paris"))
+    now = dt_util.now(dt_util.get_time_zone(TEMPO_TIMEZONE))
     change_time = time.fromisoformat(tempo_day_change_time_str)
     change_time_delta = timedelta(hours=change_time.hour, minutes=change_time.minute, seconds=change_time.second)
 

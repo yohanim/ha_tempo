@@ -10,6 +10,7 @@ import logging
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import entity_registry as er
@@ -22,7 +23,7 @@ from .forecast_coordinator import ForecastCoordinator
 from .prices_coordinator import PriceCoordinator
 from .tempo_coordinator import TempoDataCoordinator
 
-PLATFORMS = ["sensor"]
+PLATFORMS = [Platform.SENSOR]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ async def _async_ensure_refresh_service(hass: HomeAssistant) -> None:
             except Exception as err:
                 _LOGGER.warning("%s: manual Tempo refresh failed: %s", title, err)
             try:
-                await runtime.price_coordinator._update_prices(force=True)
+                await runtime.price_coordinator.async_force_prices_update()
                 await runtime.price_coordinator.async_refresh()
             except Exception as err:
                 _LOGGER.warning("%s: manual price refresh failed: %s", title, err)
@@ -80,6 +81,16 @@ def _remove_refresh_service_if_last(hass: HomeAssistant, unloaded_entry_id: str)
     hass.data.get(DOMAIN, {}).pop(DATA_REFRESH_SERVICE_REGISTERED, None)
 
 
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate config entry to the current version."""
+    if entry.version < 2:
+        _LOGGER.info("Migrating config entry from version %s to 2", entry.version)
+        await _async_migrate_unique_ids(hass, entry)
+        hass.config_entries.async_update_entry(entry, version=2)
+        _LOGGER.info("Migration to version 2 complete")
+    return True
+
+
 @dataclass
 class TempoRuntimeData:
     """Runtime data for a config entry."""
@@ -94,10 +105,7 @@ type TempoConfigEntry = ConfigEntry[TempoRuntimeData]
 
 async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> bool:
     """Setup integration from a config entry."""
-    # Migrate unique IDs if necessary
-    await _async_migrate_unique_ids(hass, entry)
-
-    # Cleanup old ghost devices
+    # Cleanup old ghost devices (idempotent, no-op once the device is gone)
     await _async_cleanup_devices(hass, entry)
 
     tempo_coordinator = TempoDataCoordinator(hass, entry)

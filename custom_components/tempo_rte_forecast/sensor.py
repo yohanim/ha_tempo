@@ -11,6 +11,7 @@ from .const import (
     CONTRACT_HEURES_CREUSES,
     CONTRACT_TEMPO,
     DEFAULT_CONTRACT,
+    NUM_FORECAST_DAYS,
 )
 from .utils import normalize_contract
 
@@ -48,12 +49,9 @@ async def async_setup_entry(
         ]
     )
 
-    # Add forecast sensors from Open DPE
-    NUM_FORECAST_DAYS = 9  # J+1 to J+9
-
     sensors = [TempoNextDayCombinedSensor(coordinator, forecast_coordinator, entry)]
-    
-    for index in range(0, NUM_FORECAST_DAYS):
+
+    for index in range(NUM_FORECAST_DAYS):
         sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, entry=entry))
 
     async_add_entities(sensors, True)

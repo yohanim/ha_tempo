@@ -4,10 +4,15 @@
       "user": {
         "title": "Configuration Tempo RTE",
         "description": "Intégration pour les couleurs RTE Tempo, les prévisions et les prix."
+      },
+      "reconfigure": {
+        "title": "Reconfigurer Tempo RTE",
+        "description": "Tous les paramètres sont gérés via les options de l'intégration (icône engrenage). Cliquez sur Soumettre pour confirmer."
       }
     },
     "abort": {
-      "already_configured": "L'appareil est déjà configuré"
+      "already_configured": "L'appareil est déjà configuré",
+      "reconfigure_successful": "La reconfiguration a réussi"
     }
   },
   "options": {

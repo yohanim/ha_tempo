@@ -17,6 +17,7 @@ from homeassistant.util import dt as dt_util
 
 from .coordinator_retry import RetryWhenNoUpdateIntervalMixin
 from .const import (
+    TEMPO_TIMEZONE,
     TEMPO_DAY_CHANGE_TIME,
     RTE_API_URL,
     RTE_API_FULL_URL,
@@ -105,7 +106,7 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
 
     async def _trigger_api_refresh(self, _now: datetime | None = None) -> None:
         """Récupération API à 7h pour couleur J+1."""
-        now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
+        now = dt_util.now().astimezone(dt_util.get_time_zone(TEMPO_TIMEZONE))
         today_date = now.strftime("%Y-%m-%d")
         
         # Évite les appels multiples le même jour
@@ -119,7 +120,7 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
 
     async def _trigger_day_change(self, _now: datetime | None = None) -> None:
         """Changement de période HP/HC ou de jour."""
-        now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
+        now = dt_util.now().astimezone(dt_util.get_time_zone(TEMPO_TIMEZONE))
         
         if now.hour == self.tempo_day_change_time.hour and now.minute == self.tempo_day_change_time.minute:
             _LOGGER.info("%s - Changement de jour Tempo", self.tempo_day_change_time_str)
@@ -181,7 +182,7 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
         params: Sequence[tuple[str, str]] | None = None,
     ) -> dict[str, Any] | list[Any] | None:
         """GET JSON générique (RTE ou api-couleur-tempo.fr)."""
-        now = dt_util.now().astimezone(dt_util.get_time_zone("Europe/Paris"))
+        now = dt_util.now().astimezone(dt_util.get_time_zone(TEMPO_TIMEZONE))
         _LOGGER.debug(
             "%s Appel à %s — URL: %s params=%s",
             log_prefix,

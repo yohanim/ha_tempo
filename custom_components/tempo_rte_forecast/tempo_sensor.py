@@ -4,6 +4,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import callback
 import logging
 from typing import Any
 
@@ -62,6 +63,15 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
                 )
             )
 
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Log state transitions and propagate the update."""
+        new_state = normalize_color(self._effective_color_raw())
+        if self._last_state is not None and new_state != self._last_state:
+            _LOGGER.info("State change: %s -> %s", self._last_state, new_state)
+        self._last_state = new_state
+        super()._handle_coordinator_update()
+
     def _effective_color_raw(self) -> str | None:
         """RTE value if present; else Open-DPE row for the same Tempo calendar day if any."""
         day = get_tempo_date(self.index, self.tempo_day_change_time_str)
@@ -97,13 +107,7 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self) -> str:
         """Return the current state."""
-        state = normalize_color(self._effective_color_raw())
-
-        if state != self._last_state and self._last_state is not None:
-            _LOGGER.info("State change: %s -> %s", self._last_state, state)
-
-        self._last_state = state
-        return state
+        return normalize_color(self._effective_color_raw())
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

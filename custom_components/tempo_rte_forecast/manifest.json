@@ -4,7 +4,7 @@
   "codeowners": ["@yohanim"],
   "config_flow": true,
   "documentation": "https://github.com/yohanim/ha_tempo",
-  "integration_type": "hub",
+  "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/yohanim/ha_tempo/issues",
   "quality_scale": "silver",

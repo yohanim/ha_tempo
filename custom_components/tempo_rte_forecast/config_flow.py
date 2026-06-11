@@ -201,7 +201,8 @@ class OptionsFlowHandler(OptionsFlow):
 class TempoConfigFlow(ConfigFlow, domain=DOMAIN):
     """Config flow for Tempo."""
 
-    VERSION = 1
+    VERSION = 2
+    MINOR_VERSION = 1
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Initial setup step."""
@@ -215,6 +216,17 @@ class TempoConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
         return self.async_create_entry(title=DEVICE_NAME, data={})
 
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Handle reconfiguration (no data fields to change — all options via OptionsFlow)."""
+        if user_input is not None:
+            return self.async_update_reload_and_abort(
+                self._get_reconfigure_entry(),
+                reason="reconfigure_successful",
+            )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema({}),
+        )
 
     @staticmethod
     @callback

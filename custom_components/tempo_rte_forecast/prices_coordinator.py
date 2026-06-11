@@ -16,6 +16,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
+    TEMPO_TIMEZONE,
     CONF_CONTRACT,
     CONTRACT_BASE,
     CONTRACT_HEURES_CREUSES,
@@ -145,6 +146,10 @@ class PriceCoordinator(DataUpdateCoordinator):
         self._scheduled_update_listeners.clear()
         await super().async_shutdown()
 
+    async def async_force_prices_update(self) -> None:
+        """Force an immediate price grid refresh (bypasses the update interval)."""
+        await self._update_prices(force=True)
+
     async def _update_prices(
         self, _now: datetime | None = None, *, force: bool = False
     ) -> None:
@@ -273,7 +278,7 @@ class PriceCoordinator(DataUpdateCoordinator):
     def _parse_base_prices(self, csv_file: io.StringIO) -> dict:
         """Parse Base price CSV."""
         reader = self._get_csv_reader(csv_file)
-        target_date = dt_util.now(dt_util.get_time_zone("Europe/Paris")).date()
+        target_date = dt_util.now(dt_util.get_time_zone(TEMPO_TIMEZONE)).date()
 
         for row in reader:
             if row.get("P_SOUSCRITE", "").strip() != self._subscribed_power:
@@ -294,7 +299,7 @@ class PriceCoordinator(DataUpdateCoordinator):
     def _parse_hphc_prices(self, csv_file: io.StringIO) -> dict:
         """Parse HP/HC price CSV."""
         reader = self._get_csv_reader(csv_file)
-        target_date = dt_util.now(dt_util.get_time_zone("Europe/Paris")).date()
+        target_date = dt_util.now(dt_util.get_time_zone(TEMPO_TIMEZONE)).date()
 
         for row in reader:
             if row.get("P_SOUSCRITE", "").strip() != self._subscribed_power:
@@ -318,7 +323,7 @@ class PriceCoordinator(DataUpdateCoordinator):
     def _parse_tempo_prices(self, csv_file: io.StringIO) -> dict:
         """Parse Tempo price CSV."""
         reader = self._get_csv_reader(csv_file)
-        target_date = dt_util.now(dt_util.get_time_zone("Europe/Paris")).date()
+        target_date = dt_util.now(dt_util.get_time_zone(TEMPO_TIMEZONE)).date()
 
         for row in reader:
             if row.get("P_SOUSCRITE", "").strip() != self._subscribed_power:
@@ -347,7 +352,7 @@ class PriceCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Calculate the current prices data."""
-        now = dt_util.now(dt_util.get_time_zone("Europe/Paris"))
+        now = dt_util.now(dt_util.get_time_zone(TEMPO_TIMEZONE))
         
         # Determine current period (HP/HC)
         if self._contract == CONTRACT_BASE:
