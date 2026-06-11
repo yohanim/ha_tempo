@@ -33,6 +33,10 @@ from .const import (
     CONF_EDF_TEMPO_COLOR_REFRESH_TIME,
     DEFAULT_EDF_TEMPO_COLOR_REFRESH_TIME,
     CONF_CONTRACT,
+    CONTRACT_BASE,
+    CONTRACT_HEURES_CREUSES,
+    CONTRACT_TEMPO,
+    DEFAULT_CONTRACT,
     CONF_OFFPEAK_RANGES,
     DEFAULT_OFFPEAK_RANGES,
     CONF_SUBSCRIBED_POWER,
@@ -48,6 +52,7 @@ from .const import (
     DEFAULT_ICON_COLOR_RED,
     DEFAULT_ICON_COLOR_UNKNOWN,
 )
+from .utils import normalize_contract
 
 class OptionsFlowHandler(OptionsFlow):
     """Handle options flow."""
@@ -57,6 +62,8 @@ class OptionsFlowHandler(OptionsFlow):
         # Options are copied on first step (HA 2025+ OptionsFlow provides config_entry on the handler).
         if not hasattr(self, "_data"):
             self._data = dict(self.config_entry.options)
+            if CONF_CONTRACT in self._data:
+                self._data[CONF_CONTRACT] = normalize_contract(self._data[CONF_CONTRACT])
 
         return self.async_show_menu(
             step_id="init",
@@ -66,6 +73,11 @@ class OptionsFlowHandler(OptionsFlow):
     async def async_step_prices(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Manage price settings."""
         if user_input is not None:
+            if CONF_CONTRACT in user_input:
+                user_input = {
+                    **user_input,
+                    CONF_CONTRACT: normalize_contract(user_input[CONF_CONTRACT]),
+                }
             self._data.update(user_input)
             return await self.async_step_init()
 
@@ -75,7 +87,7 @@ class OptionsFlowHandler(OptionsFlow):
                 vol.Schema({
                     vol.Optional(CONF_CONTRACT): selector.SelectSelector(
                         selector.SelectSelectorConfig(
-                            options=["Base", "Heures Creuses", "Tempo"],
+                            options=[CONTRACT_BASE, CONTRACT_HEURES_CREUSES, CONTRACT_TEMPO],
                             translation_key="contract",
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
@@ -94,7 +106,9 @@ class OptionsFlowHandler(OptionsFlow):
                     ),
                 }),
                 {
-                    CONF_CONTRACT: self._data.get(CONF_CONTRACT, "Tempo"),
+                    CONF_CONTRACT: normalize_contract(
+                        self._data.get(CONF_CONTRACT, DEFAULT_CONTRACT)
+                    ),
                     CONF_SUBSCRIBED_POWER: self._data.get(CONF_SUBSCRIBED_POWER, DEFAULT_SUBSCRIBED_POWER),
                     CONF_OFFPEAK_RANGES: self._data.get(CONF_OFFPEAK_RANGES, DEFAULT_OFFPEAK_RANGES),
                     CONF_PRICE_UPDATE_INTERVAL: int(self._data.get(CONF_PRICE_UPDATE_INTERVAL) or DEFAULT_PRICE_UPDATE_INTERVAL),

@@ -13,6 +13,8 @@ from .const import (
     DEFAULT_ICON_COLOR_WHITE,
     DEFAULT_ICON_COLOR_RED,
     DEFAULT_ICON_COLOR_UNKNOWN,
+    LEGACY_CONTRACT_MAP,
+    DEFAULT_CONTRACT,
 )
 
 def get_tempo_date(offset_days: int = 0, tempo_day_change_time_str: str = TEMPO_DAY_CHANGE_TIME) -> str:
@@ -66,11 +68,17 @@ def get_tempo_season(date_ref: date | datetime | None = None) -> str:
     """Retourne la saison Tempo actuelle (ex: '2024-2025'). Changement au 1er août."""
     if date_ref is None:
         date_ref = dt_util.now()
-        
-    # La saison commence le 1er août. Si mois < 8, on est dans la saison commencée l'année précédente.
+
     start_year = date_ref.year - (1 if date_ref.month < 8 else 0)
-    
     return f"{start_year}-{start_year + 1}"
+
+
+def normalize_contract(contract: str | None) -> str:
+    """Map legacy contract labels to slug values used since 2.4."""
+    if not contract:
+        return DEFAULT_CONTRACT
+    return LEGACY_CONTRACT_MAP.get(contract, contract)
+
 
 def normalize_color(color: str | None) -> str:
     """Normalize color name to English key."""
@@ -86,6 +94,16 @@ def normalize_color(color: str | None) -> str:
         "red": "red",
     }
     return mapping.get(color, color)
+
+def localized_color_label(color_key: str | None, language: str) -> str:
+    """Return a display label for contract color placeholders (EN/FR)."""
+    if not color_key:
+        return ""
+    meta = COLORS.get(normalize_color(color_key), {})
+    if language.startswith("fr"):
+        return meta.get("name", color_key)
+    return meta.get("name_en", color_key)
+
 
 def get_icon_color(options: dict, color_key: str) -> str:
     """Get icon color from options."""

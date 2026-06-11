@@ -17,6 +17,10 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_CONTRACT,
+    CONTRACT_BASE,
+    CONTRACT_HEURES_CREUSES,
+    CONTRACT_TEMPO,
+    DEFAULT_CONTRACT,
     CONF_OFFPEAK_RANGES,
     DEFAULT_OFFPEAK_RANGES,
     CONF_SUBSCRIBED_POWER,
@@ -27,7 +31,7 @@ from .const import (
     PRICE_HPHC_URL,
     PRICE_TEMPO_URL,
 )
-from .utils import parse_offpeak_ranges, is_offpeak
+from .utils import parse_offpeak_ranges, is_offpeak, normalize_contract
 from .tempo_coordinator import TempoDataCoordinator
 from .utils import get_tempo_date
 
@@ -35,9 +39,9 @@ _LOGGER = logging.getLogger(__name__)
 
 # Fallback prices in case of API failure (updated with lowercase keys)
 FALLBACK_PRICES = {
-    "Base": {"HP": 0.2516},
-    "Heures Creuses": {"HP": 0.27, "HC": 0.2068},
-    "Tempo": {
+    CONTRACT_BASE: {"HP": 0.2516},
+    CONTRACT_HEURES_CREUSES: {"HP": 0.27, "HC": 0.2068},
+    CONTRACT_TEMPO: {
         "blue": {"HP": 0.1749, "HC": 0.1486},
         "white": {"HP": 0.363, "HC": 0.1894},
         "red": {"HP": 0.7562, "HC": 0.272},
@@ -60,7 +64,7 @@ class PriceCoordinator(DataUpdateCoordinator):
         self.tempo_coordinator = tempo_coordinator
         self.session = async_get_clientsession(hass)
         self._offpeak_ranges = []
-        self._contract = "Base"
+        self._contract = DEFAULT_CONTRACT
         self._subscribed_power = DEFAULT_SUBSCRIBED_POWER
         self._price_update_interval = DEFAULT_PRICE_UPDATE_INTERVAL
         self._prices = copy.deepcopy(FALLBACK_PRICES)
@@ -92,7 +96,7 @@ class PriceCoordinator(DataUpdateCoordinator):
     def _setup_from_options(self):
         """Set up the coordinator from config entry options."""
         options = self.entry.options
-        self._contract = options.get(CONF_CONTRACT, "Tempo")
+        self._contract = normalize_contract(options.get(CONF_CONTRACT, DEFAULT_CONTRACT))
         self._subscribed_power = options.get(CONF_SUBSCRIBED_POWER, DEFAULT_SUBSCRIBED_POWER)
         self._price_update_interval = options.get(CONF_PRICE_UPDATE_INTERVAL, DEFAULT_PRICE_UPDATE_INTERVAL)
         offpeak_ranges_str = options.get(CONF_OFFPEAK_RANGES, DEFAULT_OFFPEAK_RANGES)
@@ -164,31 +168,31 @@ class PriceCoordinator(DataUpdateCoordinator):
         has_updated = False
         
         try:
-            if self._contract == "Base":
+            if self._contract == CONTRACT_BASE:
                 try:
                     base_prices = await self._fetch_and_parse_csv(PRICE_BASE_URL, self._parse_base_prices)
                     if base_prices:
-                        new_prices["Base"] = base_prices
+                        new_prices[CONTRACT_BASE] = base_prices
                         has_updated = True
                 except Exception as e:
                     _LOGGER.warning("Failed to update Base prices: %s", e)
 
-            elif self._contract == "Heures Creuses":
+            elif self._contract == CONTRACT_HEURES_CREUSES:
                 try:
                     hphc_prices = await self._fetch_and_parse_csv(PRICE_HPHC_URL, self._parse_hphc_prices)
                     if hphc_prices:
-                        new_prices["Heures Creuses"] = hphc_prices
+                        new_prices[CONTRACT_HEURES_CREUSES] = hphc_prices
                         has_updated = True
                 except Exception as e:
                     _LOGGER.warning("Failed to update HP/HC prices: %s", e)
 
-            elif self._contract == "Tempo":
+            elif self._contract == CONTRACT_TEMPO:
                 try:
                     tempo_prices = await self._fetch_and_parse_csv(PRICE_TEMPO_URL, self._parse_tempo_prices)
                     if tempo_prices:
-                        if "Tempo" not in new_prices:
-                            new_prices["Tempo"] = {}
-                        new_prices["Tempo"].update(tempo_prices)
+                        if CONTRACT_TEMPO not in new_prices:
+                            new_prices[CONTRACT_TEMPO] = {}
+                        new_prices[CONTRACT_TEMPO].update(tempo_prices)
                         has_updated = True
                 except Exception as e:
                     _LOGGER.warning("Failed to update Tempo prices: %s", e)
@@ -346,7 +350,7 @@ class PriceCoordinator(DataUpdateCoordinator):
         now = dt_util.now(dt_util.get_time_zone("Europe/Paris"))
         
         # Determine current period (HP/HC)
-        if self._contract == "Base":
+        if self._contract == CONTRACT_BASE:
             is_hc = False
             current_period = "HP"
         else:
@@ -356,17 +360,17 @@ class PriceCoordinator(DataUpdateCoordinator):
         price = 0.0
         tempo_color = "unknown"
 
-        if self._contract == "Base":
-            price = self._prices.get("Base", {}).get("HP", 0.0)
-        elif self._contract == "Heures Creuses":
-            price = self._prices.get("Heures Creuses", {}).get(current_period, 0.0)
-        elif self._contract == "Tempo":
+        if self._contract == CONTRACT_BASE:
+            price = self._prices.get(CONTRACT_BASE, {}).get("HP", 0.0)
+        elif self._contract == CONTRACT_HEURES_CREUSES:
+            price = self._prices.get(CONTRACT_HEURES_CREUSES, {}).get(current_period, 0.0)
+        elif self._contract == CONTRACT_TEMPO:
             tempo_day_change_time_str = self.tempo_coordinator.tempo_day_change_time_str
             today_date_str = get_tempo_date(0, tempo_day_change_time_str)
             tempo_color = self.tempo_coordinator.get_data(today_date_str) or "unknown"
             tempo_color = tempo_color.lower()
 
-            price = self._prices.get("Tempo", {}).get(tempo_color, {}).get(current_period, 0.0)
+            price = self._prices.get(CONTRACT_TEMPO, {}).get(tempo_color, {}).get(current_period, 0.0)
 
         # Calculate next change time
         next_change = None
@@ -393,7 +397,7 @@ class PriceCoordinator(DataUpdateCoordinator):
             "is_hp": not is_hc,
             "current_period": current_period,
             "contract": self._contract,
-            "tempo_color": tempo_color if self._contract == "Tempo" else None,
+            "tempo_color": tempo_color if self._contract == CONTRACT_TEMPO else None,
             "last_update": now.isoformat(),
             "prices_last_update": self._last_price_update.isoformat() if self._last_price_update else None,
             "contract_prices": self._prices.get(self._contract, {}),

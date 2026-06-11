@@ -8,9 +8,9 @@ from homeassistant.const import CURRENCY_EURO, ATTR_ATTRIBUTION
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, DEVICE_NAME, DEVICE_MANUFACTURER, DEVICE_MODEL, COLORS
+from .const import DOMAIN, DEVICE_NAME, DEVICE_MANUFACTURER, DEVICE_MODEL, COLORS, CONTRACT_TEMPO, CONTRACT_BASE
 from .prices_coordinator import PriceCoordinator
-from .utils import get_icon_color, normalize_color
+from .utils import get_icon_color, normalize_color, localized_color_label
 
 ATTRIBUTION = "Prix basés sur les options de l'intégration"
 
@@ -72,7 +72,7 @@ class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
             "is_red_hc": data.get("is_red_hc"),
             "next_period_change": data.get("next_period_change"),
         }
-        if data.get("contract") == "Tempo":
+        if data.get("contract") == CONTRACT_TEMPO:
             attributes["tempo_color"] = tempo_color
 
         return attributes
@@ -101,10 +101,11 @@ class SpecificPriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
     @property
     def translation_placeholders(self) -> dict[str, Any]:
         """Return translation placeholders."""
-        color_fr = COLORS.get(self._color, {}).get("name", self._color) if self._color else ""
+        language = self.hass.config.language if self.hass else "en"
+        color_label = localized_color_label(self._color, language) if self._color else ""
         return {
             "period": self._key,
-            "color": color_fr
+            "color": color_label,
         }
 
     @property
@@ -158,7 +159,7 @@ class SpecificPriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
                 attributes["active"] = True
         else:
             # Base or HC
-            if contract == "Base":
+            if contract == CONTRACT_BASE:
                 attributes["active"] = True
             elif current_period == self._key:
                 attributes["active"] = True

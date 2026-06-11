@@ -11,6 +11,8 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.tempo_rte_forecast.const import (
     CONF_CONTRACT,
+    CONTRACT_TEMPO,
+    DEFAULT_CONTRACT,
     CONF_EDF_TEMPO_COLOR_REFRESH_TIME,
     CONF_FORECAST_RETRY_DELAY,
     CONF_OPENDPE_SERVICE_TYPE,
@@ -84,7 +86,7 @@ def mock_config_entry() -> MockConfigEntry:
             CONF_TEMPO_RETRY_DELAY: TEMPO_RETRY_DELAY_MINUTES,
             CONF_FORECAST_RETRY_DELAY: FORECAST_RETRY_DELAY_MINUTES,
             CONF_OPENDPE_SERVICE_TYPE: OPENDPE_SERVICE_LIGHT,
-            CONF_CONTRACT: "Tempo",
+            CONF_CONTRACT: CONTRACT_TEMPO,
         },
     )
 

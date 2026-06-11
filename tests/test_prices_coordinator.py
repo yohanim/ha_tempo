@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 import aioresponses
 import pytest
 
-from custom_components.tempo_rte_forecast.const import PRICE_TEMPO_URL
+from custom_components.tempo_rte_forecast.const import CONTRACT_TEMPO, PRICE_TEMPO_URL
 from custom_components.tempo_rte_forecast.prices_coordinator import PriceCoordinator
 from custom_components.tempo_rte_forecast.tempo_coordinator import TempoDataCoordinator
 from tests.conftest import TODAY
@@ -62,7 +62,7 @@ async def test_fetch_and_parse_csv_from_url(hass, mock_config_entry) -> None:
     """CSV download via aiohttp is parsed end-to-end."""
     tempo = TempoDataCoordinator(hass, mock_config_entry)
     coordinator = PriceCoordinator(hass, mock_config_entry, tempo)
-    coordinator._contract = "Tempo"
+    coordinator._contract = CONTRACT_TEMPO
     coordinator._subscribed_power = "9"
     try:
         with aioresponses.aioresponses() as mocked:
@@ -90,9 +90,9 @@ async def test_async_update_data_uses_tempo_color(
     tempo.tempo_data = {TODAY: "red"}
     tempo._cached_data = {TODAY: "red"}
     coordinator = PriceCoordinator(hass, mock_config_entry, tempo)
-    coordinator._contract = "Tempo"
+    coordinator._contract = CONTRACT_TEMPO
     coordinator._prices = {
-        "Tempo": {
+        CONTRACT_TEMPO: {
             "red": {"HP": 0.7562, "HC": 0.2720},
             "blue": {"HP": 0.1749, "HC": 0.1486},
             "white": {"HP": 0.3630, "HC": 0.1894},

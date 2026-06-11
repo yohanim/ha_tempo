@@ -62,15 +62,15 @@
   "selector": {
     "contract": {
       "options": {
-        "Base": "Base",
-        "Heures Creuses": "Heures Pleines / Heures Creuses",
-        "Tempo": "Tempo"
+        "base": "Base",
+        "heures_creuses": "Heures Pleines / Heures Creuses",
+        "tempo": "Tempo"
       }
     },
     "opendpe_service_type": {
       "options": {
-        "light": "Light (JSON)",
-        "full": "Full (API)"
+        "light": "Léger (JSON)",
+        "full": "Complet (API)"
       }
     }
   },

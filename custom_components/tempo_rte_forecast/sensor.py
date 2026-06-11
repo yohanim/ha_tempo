@@ -5,7 +5,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import TempoConfigEntry
-from .const import CONF_CONTRACT
+from .const import (
+    CONF_CONTRACT,
+    CONTRACT_BASE,
+    CONTRACT_HEURES_CREUSES,
+    CONTRACT_TEMPO,
+    DEFAULT_CONTRACT,
+)
+from .utils import normalize_contract
 
 from .tempo_sensor import TempoSensor, TempoNextDayCombinedSensor
 
@@ -55,14 +62,14 @@ async def async_setup_entry(
     price_sensors = [PriceSensor(price_coordinator, entry)]
 
     # Add specific sensors based on contract type
-    contract = entry.options.get(CONF_CONTRACT, "Tempo")
+    contract = normalize_contract(entry.options.get(CONF_CONTRACT, DEFAULT_CONTRACT))
 
-    if contract == "Base":
+    if contract == CONTRACT_BASE:
         price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HP"))
-    elif contract == "Heures Creuses":
+    elif contract == CONTRACT_HEURES_CREUSES:
         price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HP"))
         price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HC"))
-    elif contract == "Tempo":
+    elif contract == CONTRACT_TEMPO:
         for color in ["blue", "white", "red"]:
             price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HP", color=color))
             price_sensors.append(SpecificPriceSensor(price_coordinator, entry, key="HC", color=color))

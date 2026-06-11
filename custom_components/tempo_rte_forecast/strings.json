@@ -62,9 +62,9 @@
   "selector": {
     "contract": {
       "options": {
-        "Base": "Base",
-        "Heures Creuses": "Off-peak / Peak",
-        "Tempo": "Tempo"
+        "base": "Base",
+        "heures_creuses": "Off-peak / Peak",
+        "tempo": "Tempo"
       }
     },
     "opendpe_service_type": {

@@ -18,8 +18,10 @@ from custom_components.tempo_rte_forecast.utils import (
     get_tempo_season,
     is_offpeak,
     normalize_color,
+    normalize_contract,
     parse_offpeak_ranges,
 )
+from custom_components.tempo_rte_forecast.const import CONTRACT_TEMPO
 
 PARIS = ZoneInfo("Europe/Paris")
 
@@ -63,6 +65,16 @@ class TestIsOffpeak:
         ranges = [(time(12, 0), time(14, 0))]
         assert is_offpeak(_paris_now(2026, 6, 11, 13, 0), ranges) is True
         assert is_offpeak(_paris_now(2026, 6, 11, 15, 0), ranges) is False
+
+
+class TestNormalizeContract:
+    def test_legacy_values(self) -> None:
+        assert normalize_contract("Tempo") == CONTRACT_TEMPO
+        assert normalize_contract("Base") == "base"
+        assert normalize_contract("Heures Creuses") == "heures_creuses"
+
+    def test_slug_values(self) -> None:
+        assert normalize_contract(CONTRACT_TEMPO) == CONTRACT_TEMPO
 
 
 class TestGetTempoSeason:
