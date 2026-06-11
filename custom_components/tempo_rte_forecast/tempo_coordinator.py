@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import date, datetime, time
 from collections.abc import Sequence
 from typing import Any
 import aiohttp
-import async_timeout
 import json
 
 from homeassistant.core import HomeAssistant
@@ -191,7 +191,7 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
         )
 
         try:
-            async with async_timeout.timeout(15):
+            async with asyncio.timeout(15):
                 async with self.session.get(url, params=params) as response:
                     _LOGGER.debug("%s Status HTTP: %s", log_prefix, response.status)
 

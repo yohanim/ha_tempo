@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import date, datetime, timedelta
-import async_timeout
 import io
 import csv
 import copy
@@ -206,7 +206,7 @@ class PriceCoordinator(DataUpdateCoordinator):
 
     async def _fetch_and_parse_csv(self, url: str, parser_func: callable) -> dict:
         """Generic function to fetch a CSV and parse it."""
-        async with async_timeout.timeout(20):
+        async with asyncio.timeout(20):
             response = await self.session.get(url)
             response.raise_for_status()
             content_bytes = await response.read()

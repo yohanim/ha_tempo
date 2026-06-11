@@ -156,14 +156,18 @@ automation:
 ```
 
 ### 5. Template Sensors (Optional)
+Modern `template:` syntax (required since HA 2026.6). Set `default_entity_id` to keep stable entity IDs.
+
 ```yaml
 template:
   - binary_sensor:
       - name: "Red Day Peak"
+        default_entity_id: binary_sensor.red_day_peak
         state: "{{ state_attr('sensor.current_price', 'is_red_hp') }}"
         icon: mdi:flash-alert
 
       - name: "Tomorrow Red"
+        default_entity_id: binary_sensor.tomorrow_red
         state: "{{ state_attr('sensor.tempo_color_j1_combined', 'tomorrow_is_red') }}"
         icon: mdi:calendar-alert
 ```
@@ -346,14 +350,18 @@ automation:
 ```
 
 ### 5. Template Sensors pour simplifier (optionnel)
+Syntaxe `template:` moderne (obligatoire depuis HA 2026.6). Définir `default_entity_id` pour des entity_id stables.
+
 ```yaml
 template:
   - binary_sensor:
       - name: "Jour Rouge HP"
+        default_entity_id: binary_sensor.jour_rouge_hp
         state: "{{ state_attr('sensor.current_price', 'is_red_hp') }}"
         icon: mdi:flash-alert
 
       - name: "Demain Rouge"
+        default_entity_id: binary_sensor.demain_rouge
         state: "{{ state_attr('sensor.tempo_color_j1_combined', 'tomorrow_is_red') }}"
         icon: mdi:calendar-alert
 ```

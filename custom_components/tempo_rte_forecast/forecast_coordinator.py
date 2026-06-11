@@ -4,6 +4,8 @@ import logging
 from datetime import date, datetime
 import json
 
+import aiohttp
+
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -185,7 +187,9 @@ async def async_fetch_opendpe_forecast(self: ForecastCoordinator) -> dict[str, F
     _LOGGER.debug("Open DPE: Service '%s' actif (URL: %s)", self.service_type, url)
 
     try:
-        async with session.get(url, timeout=10) as response:
+        async with session.get(
+            url, timeout=aiohttp.ClientTimeout(total=10)
+        ) as response:
             if response.status != 200:
                 _LOGGER.error("Open-DPE: HTTP %s", response.status)
                 ra = float(self.retry_delay * 60)
