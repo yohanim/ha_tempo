@@ -4,6 +4,8 @@ EDF Tempo integration for Home Assistant
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+PARALLEL_UPDATES = 0
+
 from . import TempoConfigEntry
 from .const import (
     CONF_CONTRACT,

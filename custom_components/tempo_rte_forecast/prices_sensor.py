@@ -4,15 +4,13 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CURRENCY_EURO, ATTR_ATTRIBUTION
+from homeassistant.const import CURRENCY_EURO
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, DEVICE_NAME, DEVICE_MANUFACTURER, DEVICE_MODEL, COLORS, CONTRACT_TEMPO, CONTRACT_BASE
 from .prices_coordinator import PriceCoordinator
 from .utils import get_icon_color, normalize_color, localized_color_label
-
-ATTRIBUTION = "Prix basés sur les options de l'intégration"
 
 class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
     """Sensor for the current electricity price."""
@@ -21,6 +19,7 @@ class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
     _attr_native_unit_of_measurement = f"{CURRENCY_EURO}/kWh"
     _attr_has_entity_name = True
     _attr_translation_key = "price"
+    _attr_attribution = "Prix basés sur les options de l'intégration"
 
     def __init__(self, coordinator: PriceCoordinator, entry: ConfigEntry):
         """Initialize the sensor."""
@@ -56,7 +55,6 @@ class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
         color_key = normalize_color(tempo_color)
         
         attributes = {
-            ATTR_ATTRIBUTION: ATTRIBUTION,
             "contract": data.get("contract"),
             "is_hc": data.get("is_hc"),
             "is_hp": data.get("is_hp"),

@@ -109,6 +109,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> boo
     await _async_cleanup_devices(hass, entry)
 
     tempo_coordinator = TempoDataCoordinator(hass, entry)
+    await tempo_coordinator.async_load_cache()
     forecast_coordinator = ForecastCoordinator(hass, entry)
 
     # Forecast first so Open-DPE data exists if RTE is down (maintenance, etc.).
@@ -129,6 +130,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> boo
         )
 
     price_coordinator = PriceCoordinator(hass, entry, tempo_coordinator)
+    await price_coordinator.async_load_cache()
     try:
         await price_coordinator.async_config_entry_first_refresh()
     except ConfigEntryNotReady:

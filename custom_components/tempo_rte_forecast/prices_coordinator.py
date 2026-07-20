@@ -12,10 +12,12 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
+    DOMAIN,
     TEMPO_TIMEZONE,
     CONF_CONTRACT,
     CONTRACT_BASE,
@@ -70,6 +72,7 @@ class PriceCoordinator(DataUpdateCoordinator):
         self._price_update_interval = DEFAULT_PRICE_UPDATE_INTERVAL
         self._prices = copy.deepcopy(FALLBACK_PRICES)
         self._last_price_update = None
+        self._store: Store = Store(hass, 1, f"{DOMAIN}_{entry.entry_id}_prices_cache")
         self._scheduled_update_listeners = []
         self._setup_from_options()
 
@@ -146,6 +149,21 @@ class PriceCoordinator(DataUpdateCoordinator):
         self._scheduled_update_listeners.clear()
         await super().async_shutdown()
 
+    async def async_load_cache(self) -> None:
+        """Restore cached price grid from disk (called before first refresh)."""
+        stored = await self._store.async_load()
+        if not stored or not isinstance(stored, dict):
+            return
+        if stored.get("contract") == self._contract and stored.get("prices"):
+            self._prices = stored["prices"]
+            last_update_str = stored.get("last_update")
+            if last_update_str:
+                try:
+                    self._last_price_update = datetime.fromisoformat(last_update_str)
+                except ValueError:
+                    pass
+            _LOGGER.debug("Restored cached prices for contract %s from storage", self._contract)
+
     async def async_force_prices_update(self) -> None:
         """Force an immediate price grid refresh (bypasses the update interval)."""
         await self._update_prices(force=True)
@@ -208,6 +226,11 @@ class PriceCoordinator(DataUpdateCoordinator):
                 self._prices = new_prices
                 self._last_price_update = dt_util.now()
                 _LOGGER.info("Successfully updated prices from data.gouv.fr")
+                self.hass.async_create_task(self._store.async_save({
+                    "contract": self._contract,
+                    "prices": self._prices,
+                    "last_update": self._last_price_update.isoformat(),
+                }))
                 await self.async_refresh()
 
         except Exception as e:

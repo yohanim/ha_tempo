@@ -13,10 +13,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .coordinator_retry import RetryWhenNoUpdateIntervalMixin
 from .const import (
+    DOMAIN,
     TEMPO_TIMEZONE,
     TEMPO_DAY_CHANGE_TIME,
     RTE_API_URL,
@@ -57,6 +59,7 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
 
         self.tempo_data = {}
         self._cached_data = {}  # Cache pour garder les dernières données valides
+        self._store: Store = Store(hass, 1, f"{DOMAIN}_{entry.entry_id}_tempo_cache")
         self._last_api_call = None
         self._data_fetched_today = False
         self._scheduled_listeners: list = []
@@ -353,10 +356,11 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
             # Valide et met en cache les données
             if self._validate_and_cache_data(values):
                 self._data_fetched_today = True
+                self.hass.async_create_task(self._store.async_save(self._cached_data))
 
                 _LOGGER.info(
-                    "✓ Données Tempo récupérées: J=%s (%s), J+1=%s (%s)", 
-                    today, self.tempo_data[today], 
+                    "✓ Données Tempo récupérées: J=%s (%s), J+1=%s (%s)",
+                    today, self.tempo_data[today],
                     tomorrow, self.tempo_data.get(tomorrow, 'N/A')
                 )
                 return self.tempo_data
@@ -376,6 +380,13 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
             "RTE Tempo API failed; serving cached data",
             retry_after=float(self.retry_delay * 60),
         )
+
+    async def async_load_cache(self) -> None:
+        """Restore cached Tempo color data from disk (called before first refresh)."""
+        stored = await self._store.async_load()
+        if stored and isinstance(stored, dict):
+            self._cached_data = stored
+            _LOGGER.debug("Restored %d cached Tempo dates from storage", len(stored))
 
     async def async_shutdown(self) -> None:
         """Release scheduled listeners and coordinator timers."""
