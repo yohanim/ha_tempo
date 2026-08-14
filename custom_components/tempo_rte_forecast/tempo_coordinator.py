@@ -46,6 +46,7 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
             hass,
             _LOGGER,
             name="Tempo RTE color",
+            config_entry=entry,
             update_interval=None,  # Pas de mise à jour automatique, uniquement programmée
         )
         self.entry = entry

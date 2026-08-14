@@ -7,7 +7,8 @@ from datetime import date, datetime
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
-import aioresponses
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from custom_components.tempo_rte_forecast.const import (
@@ -75,16 +76,21 @@ async def test_fetch_and_parse_csv_from_url(hass, mock_config_entry) -> None:
     coordinator = PriceCoordinator(hass, mock_config_entry, tempo)
     coordinator._contract = CONTRACT_TEMPO
     coordinator._subscribed_power = "9"
+
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status = MagicMock()
+    mock_resp.read = AsyncMock(return_value=TEMPO_CSV.encode("utf-8"))
+    coordinator.session = MagicMock()
+    coordinator.session.get = AsyncMock(return_value=mock_resp)
+
     try:
-        with aioresponses.aioresponses() as mocked:
-            mocked.get(PRICE_TEMPO_URL, body=TEMPO_CSV)
-            with patch(
-                "custom_components.tempo_rte_forecast.prices_coordinator.dt_util.now"
-            ) as mock_now:
-                mock_now.return_value = datetime(2026, 6, 11, 12, 0, tzinfo=PARIS)
-                prices = await coordinator._fetch_and_parse_csv(
-                    PRICE_TEMPO_URL, coordinator._parse_tempo_prices
-                )
+        with patch(
+            "custom_components.tempo_rte_forecast.prices_coordinator.dt_util.now"
+        ) as mock_now:
+            mock_now.return_value = datetime(2026, 6, 11, 12, 0, tzinfo=PARIS)
+            prices = await coordinator._fetch_and_parse_csv(
+                PRICE_TEMPO_URL, coordinator._parse_tempo_prices
+            )
     finally:
         await coordinator.async_shutdown()
         await tempo.async_shutdown()

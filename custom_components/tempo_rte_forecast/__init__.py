@@ -184,13 +184,11 @@ async def _async_cleanup_devices(hass: HomeAssistant, entry: ConfigEntry):
     """Remove old devices that have no entities."""
     dev_reg = dr.async_get(hass)
     ent_reg = er.async_get(hass)
-    
-    old_device = dev_reg.async_get_device(identifiers={(DOMAIN, "forecast")})
-    
-    if old_device:
-        entities = er.async_entries_for_device(ent_reg, old_device.id)
-        if not entities:
-            dev_reg.async_remove_device(old_device.id)
+
+    for device in dr.async_entries_for_config_entry(dev_reg, entry.entry_id):
+        if (DOMAIN, "forecast") in device.identifiers:
+            if not er.async_entries_for_device(ent_reg, device.id):
+                dev_reg.async_remove_device(device.id)
 
 async def async_unload_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> bool:
     """Unload integration."""

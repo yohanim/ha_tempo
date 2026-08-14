@@ -61,6 +61,7 @@ class PriceCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name="Price Coordinator",
+            config_entry=entry,
             update_interval=None,  # Updates are triggered by time changes
         )
         self.entry = entry

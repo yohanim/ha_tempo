@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncGenerator, Iterator
 from dataclasses import dataclass, field
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -42,6 +43,38 @@ class MockConfigEntry:
     data: dict = field(default_factory=dict)
     options: dict = field(default_factory=dict)
     pref_disable_polling: bool = False
+
+    def async_on_unload(self, func) -> None:
+        """Accept shutdown callbacks registered by DataUpdateCoordinator."""
+
+
+def make_ctx_response(*, payload=None, text=None, status=200):
+    """Mock for ``async with session.get(url) as resp:`` pattern.
+
+    Used by tempo and forecast coordinators.
+    """
+    resp = MagicMock()
+    resp.status = status
+    body = text if text is not None else (json.dumps(payload) if payload is not None else "")
+    resp.text = AsyncMock(return_value=body)
+    resp.__aenter__ = AsyncMock(return_value=resp)
+    resp.__aexit__ = AsyncMock(return_value=False)
+    return resp
+
+
+def make_await_response(*, body=b"", status=200, raise_for_status_exc=None):
+    """Mock for ``response = await session.get(url)`` pattern.
+
+    Used by the prices coordinator.
+    """
+    resp = MagicMock()
+    resp.status = status
+    resp.read = AsyncMock(return_value=body)
+    if raise_for_status_exc is not None:
+        resp.raise_for_status = MagicMock(side_effect=raise_for_status_exc)
+    else:
+        resp.raise_for_status = MagicMock()
+    return resp
 
 
 @pytest.fixture(autouse=True)

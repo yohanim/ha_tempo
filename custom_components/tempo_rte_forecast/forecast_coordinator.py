@@ -37,6 +37,7 @@ class ForecastCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator)
             hass,
             _LOGGER,
             name="Tempo Forecast Coordinator",
+            config_entry=entry,
             update_interval=None,  # refresh none as provider do it at fixed hours
         )
 
