@@ -94,8 +94,6 @@ class PriceCoordinator(DataUpdateCoordinator):
                 second=update_time.second,
             )
         )
-        # Initial prices fetch
-        self.hass.async_create_task(self._update_prices())
 
     @callback
     def _setup_from_options(self):
@@ -164,6 +162,15 @@ class PriceCoordinator(DataUpdateCoordinator):
                 except ValueError:
                     pass
             _LOGGER.debug("Restored cached prices for contract %s from storage", self._contract)
+
+    def async_schedule_initial_fetch(self) -> None:
+        """Kick off the first price grid fetch in the background.
+
+        Call this only after async_load_cache() has completed, so a fetch
+        that resolves quickly can't race the cache restore and get
+        overwritten by stale disk data.
+        """
+        self.hass.async_create_task(self._update_prices())
 
     async def async_force_prices_update(self) -> None:
         """Force an immediate price grid refresh (bypasses the update interval)."""

@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.storage import Store
 
 from .const import (
     DOMAIN
@@ -109,7 +110,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> boo
     await _async_cleanup_devices(hass, entry)
 
     tempo_coordinator = TempoDataCoordinator(hass, entry)
-    await tempo_coordinator.async_load_cache()
+    try:
+        await tempo_coordinator.async_load_cache()
+    except Exception as err:
+        _LOGGER.warning("Failed to restore cached Tempo colors: %s", err)
     forecast_coordinator = ForecastCoordinator(hass, entry)
 
     # Forecast first so Open-DPE data exists if RTE is down (maintenance, etc.).
@@ -130,7 +134,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> boo
         )
 
     price_coordinator = PriceCoordinator(hass, entry, tempo_coordinator)
-    await price_coordinator.async_load_cache()
+    try:
+        await price_coordinator.async_load_cache()
+    except Exception as err:
+        _LOGGER.warning("Failed to restore cached prices: %s", err)
+    # Cache is restored; safe to kick off the background fetch now, no race.
+    price_coordinator.async_schedule_initial_fetch()
     try:
         await price_coordinator.async_config_entry_first_refresh()
     except ConfigEntryNotReady:
@@ -181,7 +190,13 @@ async def _async_migrate_unique_ids(hass: HomeAssistant, entry: ConfigEntry):
                 ent_reg.async_update_entity(entity.entity_id, new_unique_id=new_unique_id)
 
 async def _async_cleanup_devices(hass: HomeAssistant, entry: ConfigEntry):
-    """Remove old devices that have no entities."""
+    """Remove old devices that have no entities.
+
+    Scoped to this entry (not a global identifiers lookup) because HA's
+    single-entry-per-device model already removes a device automatically
+    once its last owning config entry is gone, so a ghost device can only
+    ever belong to the entry currently being set up.
+    """
     dev_reg = dr.async_get(hass)
     ent_reg = er.async_get(hass)
 
@@ -201,3 +216,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> bo
     if unload_ok:
         _remove_refresh_service_if_last(hass, entry_id)
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Delete this entry's cached data stores from disk."""
+    await Store(hass, 1, f"{DOMAIN}_{entry.entry_id}_prices_cache").async_remove()
+    await Store(hass, 1, f"{DOMAIN}_{entry.entry_id}_tempo_cache").async_remove()
