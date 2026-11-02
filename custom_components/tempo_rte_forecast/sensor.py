@@ -2,7 +2,7 @@
 EDF Tempo integration for Home Assistant
 """
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 PARALLEL_UPDATES = 0
 
@@ -27,7 +27,7 @@ from .prices_sensor import PriceSensor, SpecificPriceSensor
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: TempoConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Setup entities from a config entry."""
     coordinator = entry.runtime_data.tempo_coordinator
@@ -56,7 +56,8 @@ async def async_setup_entry(
     for index in range(NUM_FORECAST_DAYS):
         sensors.append(OpenDPEForecastSensor(forecast_coordinator, index, entry=entry))
 
-    async_add_entities(sensors, True)
+    # No update_before_add: coordinators already ran their first refresh.
+    async_add_entities(sensors)
 
     # Add prices sensor
     price_sensors = [PriceSensor(price_coordinator, entry)]

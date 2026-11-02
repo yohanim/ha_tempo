@@ -63,9 +63,10 @@ def make_ctx_response(*, payload=None, text=None, status=200):
 
 
 def make_await_response(*, body=b"", status=200, raise_for_status_exc=None):
-    """Mock for ``response = await session.get(url)`` pattern.
+    """Mock for ``async with session.get(url) as resp:`` returning bytes via ``read()``.
 
-    Used by the prices coordinator.
+    Used by the prices coordinator; ``__aexit__`` lets tests assert the response
+    is released even when ``raise_for_status`` raises.
     """
     resp = MagicMock()
     resp.status = status
@@ -74,6 +75,8 @@ def make_await_response(*, body=b"", status=200, raise_for_status_exc=None):
         resp.raise_for_status = MagicMock(side_effect=raise_for_status_exc)
     else:
         resp.raise_for_status = MagicMock()
+    resp.__aenter__ = AsyncMock(return_value=resp)
+    resp.__aexit__ = AsyncMock(return_value=False)
     return resp
 
 

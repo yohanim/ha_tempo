@@ -8,12 +8,13 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.config_entries import (
-    ConfigFlow,
-    OptionsFlow,
     ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+    OptionsFlowWithReload,
 )
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
 from .const import (
@@ -54,10 +55,10 @@ from .const import (
 )
 from .utils import normalize_contract
 
-class OptionsFlowHandler(OptionsFlow):
-    """Handle options flow."""
+class OptionsFlowHandler(OptionsFlowWithReload):
+    """Handle options flow; the entry reloads on save so new options apply."""
 
-    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage the options."""
         # Options are copied on first step (HA 2025+ OptionsFlow provides config_entry on the handler).
         if not hasattr(self, "_data"):
@@ -70,7 +71,7 @@ class OptionsFlowHandler(OptionsFlow):
             menu_options=["prices", "api", "retries", "icons", "finish"]
         )
 
-    async def async_step_prices(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_prices(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage price settings."""
         if user_input is not None:
             if CONF_CONTRACT in user_input:
@@ -116,7 +117,7 @@ class OptionsFlowHandler(OptionsFlow):
             ),
         )
 
-    async def async_step_api(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_api(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage API settings."""
         if user_input is not None:
             self._data.update(user_input)
@@ -146,7 +147,7 @@ class OptionsFlowHandler(OptionsFlow):
             ),
         )
 
-    async def async_step_retries(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_retries(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage retry settings."""
         if user_input is not None:
             self._data.update(user_input)
@@ -170,7 +171,7 @@ class OptionsFlowHandler(OptionsFlow):
             ),
         )
 
-    async def async_step_icons(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_icons(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage icon settings."""
         if user_input is not None:
             self._data.update(user_input)
@@ -194,7 +195,7 @@ class OptionsFlowHandler(OptionsFlow):
             ),
         )
 
-    async def async_step_finish(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_finish(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Finish the options flow."""
         return self.async_create_entry(title="", data=self._data)
 
@@ -204,7 +205,7 @@ class TempoConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 2
     MINOR_VERSION = 1
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Initial setup step."""
         if user_input is None:
             return self.async_show_form(
@@ -216,7 +217,7 @@ class TempoConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
         return self.async_create_entry(title=DEVICE_NAME, data={})
 
-    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle reconfiguration (no data fields to change — all options via OptionsFlow)."""
         if user_input is not None:
             return self.async_update_reload_and_abort(

@@ -65,23 +65,34 @@ class TestValidateAndCacheData:
         with _PATCH_DATE:
             assert coord._validate_and_cache_data({TODAY: "purple", TOMORROW: "blue"}) is False
 
-    def test_missing_tomorrow_returns_false(self) -> None:
+    def test_missing_tomorrow_is_valid(self) -> None:
+        """J+1 not yet published is not a validation failure (partial success)."""
         coord = _make_coord()
         with _PATCH_DATE:
-            assert coord._validate_and_cache_data({TODAY: "blue"}) is False
+            assert coord._validate_and_cache_data({TODAY: "blue"}) is True
+        assert coord.tempo_data == {TODAY: "blue"}
 
-    def test_invalid_color_tomorrow_returns_false(self) -> None:
+    def test_invalid_color_tomorrow_is_dropped(self) -> None:
         coord = _make_coord()
         with _PATCH_DATE:
-            assert coord._validate_and_cache_data({TODAY: "red", TOMORROW: "purple"}) is False
+            assert coord._validate_and_cache_data({TODAY: "red", TOMORROW: "purple"}) is True
+        assert TOMORROW not in coord.tempo_data
+        assert TOMORROW not in coord._cached_data
+
+    def test_unknown_today_returns_false(self) -> None:
+        """'unknown' is a display value, never a published color."""
+        coord = _make_coord()
+        with _PATCH_DATE:
+            assert coord._validate_and_cache_data({TODAY: "unknown", TOMORROW: "blue"}) is False
+        assert TODAY not in coord._cached_data
 
     def test_cache_updated_even_when_validation_fails(self) -> None:
-        """Valid entries in the dict must be cached even if overall validation fails."""
+        """Valid entries in the dict must be cached even if J is missing."""
         coord = _make_coord()
         with _PATCH_DATE:
-            coord._validate_and_cache_data({TODAY: "blue", "2026-01-01": "red"})
-        # TODAY is valid and goes into cache; validation still fails (no TOMORROW)
-        assert coord._cached_data[TODAY] == "blue"
+            result = coord._validate_and_cache_data({TOMORROW: "blue", "2026-01-01": "red"})
+        assert result is False
+        assert coord._cached_data[TOMORROW] == "blue"
         assert coord._cached_data["2026-01-01"] == "red"
 
     def test_normalizes_to_lowercase(self) -> None:
@@ -115,6 +126,12 @@ class TestGetData:
         coord.tempo_data = {}
         coord._cached_data = {TODAY: "white"}
         assert coord.get_data(TODAY) == "white"
+
+    def test_falls_back_to_cache_when_tempo_data_value_empty(self) -> None:
+        coord = _make_coord()
+        coord.tempo_data = {TOMORROW: None}
+        coord._cached_data = {TOMORROW: "red"}
+        assert coord.get_data(TOMORROW) == "red"
 
     def test_returns_none_when_not_in_either(self) -> None:
         coord = _make_coord()

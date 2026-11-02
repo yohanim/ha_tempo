@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+from homeassistant.config_entries import OptionsFlowWithReload
 
 from custom_components.tempo_rte_forecast.config_flow import (
     OptionsFlowHandler,
@@ -28,6 +29,12 @@ def test_config_flow_minor_version_is_1() -> None:
 def test_async_get_options_flow_returns_handler() -> None:
     result = TempoConfigFlow.async_get_options_flow(MagicMock())
     assert isinstance(result, OptionsFlowHandler)
+
+
+def test_options_flow_reloads_entry_on_save() -> None:
+    """Saving options must reload the entry so coordinators pick them up."""
+    assert issubclass(OptionsFlowHandler, OptionsFlowWithReload)
+    assert OptionsFlowHandler.automatic_reload is True
 
 
 # ---------------------------------------------------------------------------

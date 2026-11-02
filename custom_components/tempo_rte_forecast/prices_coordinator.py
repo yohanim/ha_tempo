@@ -33,6 +33,7 @@ from .const import (
     PRICE_BASE_URL,
     PRICE_HPHC_URL,
     PRICE_TEMPO_URL,
+    STORE_SAVE_DELAY,
 )
 from .utils import parse_offpeak_ranges, is_offpeak, normalize_contract
 from .tempo_coordinator import TempoDataCoordinator
@@ -170,7 +171,9 @@ class PriceCoordinator(DataUpdateCoordinator):
         that resolves quickly can't race the cache restore and get
         overwritten by stale disk data.
         """
-        self.hass.async_create_task(self._update_prices())
+        self.entry.async_create_background_task(
+            self.hass, self._update_prices(), name=f"{DOMAIN} initial price fetch"
+        )
 
     async def async_force_prices_update(self) -> None:
         """Force an immediate price grid refresh (bypasses the update interval)."""
@@ -234,22 +237,26 @@ class PriceCoordinator(DataUpdateCoordinator):
                 self._prices = new_prices
                 self._last_price_update = dt_util.now()
                 _LOGGER.info("Successfully updated prices from data.gouv.fr")
-                self.hass.async_create_task(self._store.async_save({
-                    "contract": self._contract,
-                    "prices": self._prices,
-                    "last_update": self._last_price_update.isoformat(),
-                }))
+                self._store.async_delay_save(self._data_to_store, STORE_SAVE_DELAY)
                 await self.async_refresh()
 
         except Exception as e:
             _LOGGER.error("Unexpected error during price update: %s. Keeping previous prices.", e, exc_info=True)
 
+    def _data_to_store(self) -> dict[str, Any]:
+        """Price grid snapshot persisted by the Store."""
+        return {
+            "contract": self._contract,
+            "prices": self._prices,
+            "last_update": self._last_price_update.isoformat() if self._last_price_update else None,
+        }
+
     async def _fetch_and_parse_csv(self, url: str, parser_func: callable) -> dict:
         """Generic function to fetch a CSV and parse it."""
         async with asyncio.timeout(20):
-            response = await self.session.get(url)
-            response.raise_for_status()
-            content_bytes = await response.read()
+            async with self.session.get(url) as response:
+                response.raise_for_status()
+                content_bytes = await response.read()
         
         # Tentative de décodage UTF-8 (avec gestion du BOM), sinon repli sur Latin-1
         try:

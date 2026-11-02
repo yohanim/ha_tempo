@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from unittest.mock import MagicMock
 
 import pytest
@@ -95,6 +96,63 @@ async def test_async_update_data_falls_back_to_rte_full(
 
     assert data[TODAY] == "white"
     assert data[TOMORROW] == "blue"
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_partial_success_when_j1_not_published(
+    hass, mock_config_entry, fixed_tempo_dates, caplog
+) -> None:
+    """J valid, J+1 missing everywhere: data returned, retry armed, one WARNING per attempt."""
+    full_url = RTE_API_FULL_URL.format(season="2025-2026")
+    coordinator = TempoDataCoordinator(hass, mock_config_entry)
+    coordinator.session = MagicMock()
+    coordinator.session.get = _url_dispatcher(
+        **{
+            RTE_API_URL: make_ctx_response(payload={"values": {TODAY: "blue"}}),
+            COULEUR_TEMPO_API_BASE: make_ctx_response(
+                payload=[{"dateJour": TOMORROW, "codeJour": 0}]
+            ),
+            full_url: make_ctx_response(payload={"values": {TODAY: "blue"}}),
+        }
+    )
+    retry_seconds = float(mock_config_entry.options[CONF_TEMPO_RETRY_DELAY] * 60)
+    try:
+        with caplog.at_level(logging.INFO, logger="custom_components.tempo_rte_forecast"):
+            data = await coordinator._async_update_data()
+            assert data == {TODAY: "blue"}
+            assert coordinator._retry_after == retry_seconds
+            assert coordinator._data_fetched_today is False
+
+            coordinator._retry_after = None
+            await coordinator._async_update_data()
+            assert coordinator._retry_after == retry_seconds
+    finally:
+        await coordinator.async_shutdown()
+
+    pending = [r for r in caplog.records if "pas encore publiée" in r.getMessage()]
+    assert [r.levelno for r in pending] == [logging.WARNING, logging.WARNING]
+    assert not [
+        r for r in caplog.records
+        if r.levelno >= logging.WARNING and "pas encore publiée" not in r.getMessage()
+    ]
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_complete_does_not_arm_retry(
+    hass, mock_config_entry, fixed_tempo_dates
+) -> None:
+    coordinator = TempoDataCoordinator(hass, mock_config_entry)
+    coordinator.session = MagicMock()
+    coordinator.session.get = MagicMock(
+        return_value=make_ctx_response(payload={"values": {TODAY: "blue", TOMORROW: "red"}})
+    )
+    try:
+        await coordinator._async_update_data()
+    finally:
+        await coordinator.async_shutdown()
+
+    assert coordinator._retry_after is None
+    assert coordinator._data_fetched_today is True
 
 
 @pytest.mark.asyncio

@@ -19,7 +19,7 @@ from custom_components.tempo_rte_forecast.const import (
 )
 from custom_components.tempo_rte_forecast.prices_coordinator import PriceCoordinator
 from custom_components.tempo_rte_forecast.tempo_coordinator import TempoDataCoordinator
-from tests.conftest import TODAY
+from tests.conftest import TODAY, make_await_response
 
 PARIS = ZoneInfo("Europe/Paris")
 
@@ -77,11 +77,9 @@ async def test_fetch_and_parse_csv_from_url(hass, mock_config_entry) -> None:
     coordinator._contract = CONTRACT_TEMPO
     coordinator._subscribed_power = "9"
 
-    mock_resp = MagicMock()
-    mock_resp.raise_for_status = MagicMock()
-    mock_resp.read = AsyncMock(return_value=TEMPO_CSV.encode("utf-8"))
+    mock_resp = make_await_response(body=TEMPO_CSV.encode("utf-8"))
     coordinator.session = MagicMock()
-    coordinator.session.get = AsyncMock(return_value=mock_resp)
+    coordinator.session.get = MagicMock(return_value=mock_resp)
 
     try:
         with patch(
@@ -96,6 +94,57 @@ async def test_fetch_and_parse_csv_from_url(hass, mock_config_entry) -> None:
         await tempo.async_shutdown()
 
     assert prices["white"]["HP"] == pytest.approx(0.3630)
+    mock_resp.__aexit__.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_fetch_and_parse_csv_releases_response_on_http_error(
+    hass, mock_config_entry
+) -> None:
+    """A failing raise_for_status must still release the response."""
+    tempo = TempoDataCoordinator(hass, mock_config_entry)
+    coordinator = PriceCoordinator(hass, mock_config_entry, tempo)
+    mock_resp = make_await_response(status=503, raise_for_status_exc=RuntimeError("503"))
+    coordinator.session = MagicMock()
+    coordinator.session.get = MagicMock(return_value=mock_resp)
+
+    try:
+        with pytest.raises(RuntimeError):
+            await coordinator._fetch_and_parse_csv(
+                PRICE_TEMPO_URL, coordinator._parse_tempo_prices
+            )
+    finally:
+        await coordinator.async_shutdown()
+        await tempo.async_shutdown()
+
+    mock_resp.__aexit__.assert_awaited_once()
+    mock_resp.read.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_update_prices_persists_with_delayed_save(hass, mock_config_entry) -> None:
+    """Successful price update schedules a Store.async_delay_save of the grid."""
+    tempo = TempoDataCoordinator(hass, mock_config_entry)
+    coordinator = PriceCoordinator(hass, mock_config_entry, tempo)
+    coordinator._contract = CONTRACT_TEMPO
+    new_grid = {"blue": {"HP": 1.0, "HC": 0.5}}
+    coordinator._store = MagicMock()
+
+    try:
+        with patch.object(
+            coordinator, "_fetch_and_parse_csv", AsyncMock(return_value=new_grid)
+        ):
+            await coordinator._update_prices(force=True)
+    finally:
+        await coordinator.async_shutdown()
+        await tempo.async_shutdown()
+
+    coordinator._store.async_delay_save.assert_called_once()
+    data_func = coordinator._store.async_delay_save.call_args.args[0]
+    stored = data_func()
+    assert stored["contract"] == CONTRACT_TEMPO
+    assert stored["prices"][CONTRACT_TEMPO]["blue"] == new_grid["blue"]
+    assert stored["last_update"] is not None
 
 
 @pytest.mark.asyncio

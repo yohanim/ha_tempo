@@ -4,7 +4,7 @@ from typing import Any
 from dataclasses import asdict
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .utils import get_tempo_date, normalize_color, get_icon_color

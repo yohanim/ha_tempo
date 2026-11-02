@@ -24,7 +24,7 @@ from .const import (
     RTE_API_URL,
     RTE_API_FULL_URL,
     COULEUR_TEMPO_API_BASE,
-    COLORS,
+    STORE_SAVE_DELAY,
     TEMPO_RETRY_DELAY_MINUTES,
     CONF_TEMPO_DAY_CHANGE_TIME,
     CONF_TEMPO_RETRY_DELAY,
@@ -36,6 +36,9 @@ from .const import (
 from .utils import get_tempo_date, get_tempo_season
 
 _LOGGER = logging.getLogger(__name__)
+
+# Couleurs publiées par RTE ("unknown" n'est qu'une valeur d'affichage)
+TEMPO_DAY_COLORS = frozenset({"blue", "white", "red"})
 
 class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator):
     """Coordinateur pour récupérer les données RTE Tempo."""
@@ -134,13 +137,19 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
         self.async_set_updated_data(self.tempo_data)
 
     def _validate_and_cache_data(self, new_data: dict[str, Any]) -> bool:
-        """Valide les nouvelles données et met à jour le cache si valides."""
+        """Valide la couleur J et met à jour le cache avec toutes les couleurs valides.
+
+        J+1 n'est pas exigé ici : RTE le publie en cours de matinée, son absence est
+        gérée par _async_update_data (succès partiel + rejeu).
+        """
         if not new_data:
             _LOGGER.warning("[Validation] Données vides reçues de l'API (dict vide ou None)")
             return False
 
         # Normalise les données en minuscules
-        normalized_data = {d: c.lower() if c else None for d, c in new_data.items()}
+        normalized_data = {
+            d: c.lower() if isinstance(c, str) else None for d, c in new_data.items()
+        }
 
         today = get_tempo_date(0, self.tempo_day_change_time_str)
         tomorrow = get_tempo_date(1, self.tempo_day_change_time_str)
@@ -148,35 +157,33 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
         _LOGGER.debug("[Validation] Date J calculée: %s, Date J+1: %s", today, tomorrow)
         _LOGGER.debug("[Validation] Nombre total d'entrées reçues: %s", len(normalized_data))
 
-        # Vérifie que les données essentielles sont présentes
         today_color = normalized_data.get(today)
         tomorrow_color = normalized_data.get(tomorrow)
 
         # Mise à jour du cache avec les données valides
-        valid_entries = {d: c for d, c in normalized_data.items() if c in COLORS}
+        valid_entries = {d: c for d, c in normalized_data.items() if c in TEMPO_DAY_COLORS}
         self._cached_data.update(valid_entries)
-        cached_count = len(valid_entries)
-        _LOGGER.info("[Validation] Cache mis à jour (%s entrées) - J: %s, J+1: %s", cached_count, today_color, tomorrow_color or 'N/A')
-
-        _LOGGER.debug("[Validation] Couleur J (%s): %s", today, today_color)
-        _LOGGER.debug("[Validation] Couleur J+1 (%s): %s", tomorrow, tomorrow_color)
+        _LOGGER.debug("[Validation] Cache mis à jour (%s entrées) - J: %s, J+1: %s", len(valid_entries), today_color, tomorrow_color or 'N/A')
 
         if not today_color:
             _LOGGER.warning("[Validation] Date J (%s) absente des données API", today)
             _LOGGER.debug("[Validation] Dates disponibles (dernières 10): %s", sorted(normalized_data.keys())[-10:])
             return False
 
-        if today_color not in COLORS:
-            _LOGGER.warning("[Validation] Couleur J invalide: '%s' (attendu: %s)", today_color, list(COLORS.keys()))
+        if today_color not in TEMPO_DAY_COLORS:
+            _LOGGER.warning("[Validation] Couleur J invalide: '%s' (attendu: %s)", today_color, sorted(TEMPO_DAY_COLORS))
             return False
 
-        # J+1 peut ne pas encore être disponible (avant 7h)
-        if (not tomorrow_color) or (tomorrow_color not in COLORS):
-            _LOGGER.warning("[Validation] Couleur J+1 invalide: '%s' (attendu: %s)", tomorrow_color, list(COLORS.keys()))
-            return False
-
-        self.tempo_data = normalized_data
+        self.tempo_data = valid_entries
         return True
+
+    def _log_tomorrow_pending(self, tomorrow: str) -> None:
+        """Un seul WARNING par essai tant que J+1 n'est pas publié."""
+        _LOGGER.warning(
+            "Couleur J+1 (%s) pas encore publiée, nouvel essai dans %s min",
+            tomorrow,
+            self.retry_delay,
+        )
 
     async def _fetch_json_url(
         self,
@@ -356,13 +363,20 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
 
             # Valide et met en cache les données
             if self._validate_and_cache_data(values):
-                self._data_fetched_today = True
-                self.hass.async_create_task(self._store.async_save(self._cached_data))
+                self._store.async_delay_save(lambda: dict(self._cached_data), STORE_SAVE_DELAY)
 
+                if self.tempo_data.get(tomorrow) not in TEMPO_DAY_COLORS:
+                    # Succès partiel : J est à jour, J+1 pas encore publié.
+                    # Rejeu programmé par RetryWhenNoUpdateIntervalMixin.
+                    self._log_tomorrow_pending(tomorrow)
+                    self._retry_after = float(self.retry_delay * 60)
+                    return self.tempo_data
+
+                self._data_fetched_today = True
                 _LOGGER.info(
                     "✓ Données Tempo récupérées: J=%s (%s), J+1=%s (%s)",
                     today, self.tempo_data[today],
-                    tomorrow, self.tempo_data.get(tomorrow, 'N/A')
+                    tomorrow, self.tempo_data[tomorrow],
                 )
                 return self.tempo_data
             else:
@@ -397,6 +411,4 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
         await super().async_shutdown()
 
     def get_data(self, date: str) -> str | None:
-        if date in self.tempo_data:
-            return self.tempo_data.get(date)
-        return self._cached_data.get(date, None)
+        return self.tempo_data.get(date) or self._cached_data.get(date)

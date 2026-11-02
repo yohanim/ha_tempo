@@ -3,7 +3,12 @@
 Core schedules ``UpdateFailed(retry_after=...)`` only if ``update_interval`` is set
 (see ``homeassistant.helpers.update_coordinator._schedule_refresh``). This integration
 uses ``update_interval=None`` and ``async_track_time_change`` instead; the mixin
-below mirrors the core timer logic for the one-shot retry case.
+below schedules the one-shot retry itself.
+
+The retry goes through the public ``async_call_later`` helper and core's
+``_handle_refresh_interval`` (debouncer lock, ``scheduled=True``), not the
+name-mangled ``__wrap_handle_refresh_interval`` callback: HA 2026.10.0 changed
+its signature to ``(self, _: HassJob)``, which broke a direct ``loop.call_at``.
 
 Sensors override ``available`` based on cached values where applicable so a failed
 refresh (``last_update_success`` false) does not hide stale-but-valid data.
@@ -11,22 +16,35 @@ refresh (``last_update_success`` false) does not hide stale-but-valid data.
 
 from __future__ import annotations
 
-from homeassistant.core import callback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-
-
-def _coordinator_wrap_handle_refresh(coordinator: DataUpdateCoordinator):
-    """Bound callback for DataUpdateCoordinator.__wrap_handle_refresh_interval.
-
-    ``self.__wrap_handle_refresh_interval`` cannot be used inside this mixin: Python
-    would mangle it to ``_RetryWhenNoUpdateIntervalMixin__...`` instead of the
-    real ``_DataUpdateCoordinator__wrap_handle_refresh_interval`` on the instance.
-    """
-    return getattr(coordinator, "_DataUpdateCoordinator__wrap_handle_refresh_interval")
+from homeassistant.core import HassJob, callback
+from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 
 class RetryWhenNoUpdateIntervalMixin:
-    """Honor ``retry_after`` from ``UpdateFailed`` when ``update_interval`` is ``None``."""
+    """Honor ``retry_after`` when ``update_interval`` is ``None``.
+
+    ``retry_after`` comes from ``UpdateFailed`` or is set directly on
+    ``_retry_after`` by ``_async_update_data`` for a partial success.
+    """
+
+    async def async_config_entry_first_refresh(self) -> None:
+        """First refresh, then arm the retry core skips during setup.
+
+        Core ignores ``UpdateFailed.retry_after`` on the first refresh and only
+        calls ``_schedule_refresh`` once entities listen, which they don't yet.
+        """
+        try:
+            await super().async_config_entry_first_refresh()  # type: ignore[misc]
+        finally:
+            err = self.last_exception
+            if (
+                not self.last_update_success
+                and isinstance(err, UpdateFailed)
+                and err.retry_after is not None
+            ):
+                self._retry_after = err.retry_after
+            self._schedule_refresh()
 
     @callback
     def _schedule_refresh(self) -> None:
@@ -40,11 +58,17 @@ class RetryWhenNoUpdateIntervalMixin:
         if self.config_entry and self.config_entry.pref_disable_polling:
             return
 
+        # Stored in _unsub_refresh so core's _async_unsub_refresh (next refresh,
+        # shutdown) cancels a pending retry.
         self._async_unsub_refresh()
-        hass = self.hass
-        loop = hass.loop
-        update_interval = self._retry_after
+        delay = self._retry_after
         self._retry_after = None
-        next_refresh = int(loop.time()) + self._microsecond + update_interval
-        wrap = _coordinator_wrap_handle_refresh(self)
-        self._unsub_refresh = loop.call_at(next_refresh, wrap).cancel
+        self._unsub_refresh = async_call_later(
+            self.hass,
+            delay,
+            HassJob(
+                self._handle_refresh_interval,
+                f"{self.name} retry",
+                cancel_on_shutdown=True,
+            ),
+        )
