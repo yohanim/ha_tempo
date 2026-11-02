@@ -1,6 +1,7 @@
 {
   "domain": "tempo_rte_forecast",
   "name": "Tempo RTE colors and Open DPE Forecast",
+  "categories": ["energy.energy_prices"],
   "codeowners": ["@yohanim"],
   "config_flow": true,
   "documentation": "https://github.com/yohanim/ha_tempo",
