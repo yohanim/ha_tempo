@@ -21,6 +21,8 @@ It retrieves data from several reliable sources to provide a complete set of sen
 
 Use the blue buttons above to install the integration via HACS then add it from the Home Assistant integrations page.
 
+**Home Assistant 2026.11+**: HACS is now built in as the **Marketplace** (*Settings → Marketplace*). Select **Add from link** and enter `yohanim/ha_tempo` (a GitHub connection is required for custom repositories). The button above still works and opens the repository in the Marketplace; existing HACS installs are migrated automatically.
+
 **Manual installation**: Copy the contents of the `custom_components/tempo_rte_forecast/` folder to your Home Assistant `custom_components` folder, then restart.
 
 ---
@@ -214,6 +216,8 @@ Elle récupère les données depuis plusieurs sources fiables pour fournir un en
 ## 📦 Installation
 
 Utilisez les boutons bleus en haut de page pour installer l'intégration via HACS puis l'ajouter depuis la page des intégrations de Home Assistant.
+
+**Home Assistant 2026.11+** : HACS est désormais intégré sous le nom **Marketplace** (*Paramètres → Marketplace*). Sélectionnez **Ajouter depuis un lien** et saisissez `yohanim/ha_tempo` (une connexion GitHub est requise pour les dépôts personnalisés). Le bouton ci-dessus fonctionne toujours et ouvre le dépôt dans le Marketplace ; les installations HACS existantes sont migrées automatiquement.
 
 **Installation manuelle** : Copiez le contenu du dossier `custom_components/tempo_rte_forecast/` dans votre dossier `custom_components` de Home Assistant, puis redémarrez.
 

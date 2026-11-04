@@ -31,8 +31,10 @@ class RetryWhenNoUpdateIntervalMixin:
     async def async_config_entry_first_refresh(self) -> None:
         """First refresh, then arm the retry core skips during setup.
 
-        Core ignores ``UpdateFailed.retry_after`` on the first refresh and only
-        calls ``_schedule_refresh`` once entities listen, which they don't yet.
+        Core does not schedule ``UpdateFailed.retry_after`` on the first refresh
+        (since 2026.11 it forwards it to ``ConfigEntryNotReady``, which setup
+        catches to keep going) and only calls ``_schedule_refresh`` once entities
+        listen, which they don't yet.
         """
         try:
             await super().async_config_entry_first_refresh()  # type: ignore[misc]

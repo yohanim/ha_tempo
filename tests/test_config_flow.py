@@ -90,3 +90,47 @@ async def test_step_reconfigure_empty_data_schema() -> None:
     await flow.async_step_reconfigure(user_input=None)
 
     assert captured.get("data_schema") == vol.Schema({})
+
+
+# ---------------------------------------------------------------------------
+# Off-peak ranges field visibility (HA 2026.11 conditional fields)
+# ---------------------------------------------------------------------------
+
+
+def test_offpeak_marker_falls_back_without_visible_support(monkeypatch) -> None:
+    """On HA < 2026.11 the field is a plain vol.Optional, always shown."""
+    import voluptuous as vol
+
+    from custom_components.tempo_rte_forecast import config_flow
+    from custom_components.tempo_rte_forecast.const import CONF_OFFPEAK_RANGES
+
+    monkeypatch.setattr(config_flow, "_FlowOptional", None)
+    marker = config_flow._offpeak_ranges_marker()
+    assert type(marker) is vol.Optional
+    assert marker.schema == CONF_OFFPEAK_RANGES
+    assert getattr(marker, "visible", None) is None
+
+
+def test_offpeak_marker_hidden_for_base_contract(monkeypatch) -> None:
+    """On HA 2026.11+ the field is only visible for HC and Tempo contracts."""
+    from custom_components.tempo_rte_forecast import config_flow
+    from custom_components.tempo_rte_forecast.const import (
+        CONF_CONTRACT,
+        CONF_OFFPEAK_RANGES,
+        CONTRACT_HEURES_CREUSES,
+        CONTRACT_TEMPO,
+    )
+
+    class _FakeFlowOptional:
+        def __init__(self, key, *, visible=None):
+            self.schema = key
+            self.visible = visible
+
+    monkeypatch.setattr(config_flow, "_FlowOptional", _FakeFlowOptional)
+    marker = config_flow._offpeak_ranges_marker()
+    assert marker.schema == CONF_OFFPEAK_RANGES
+    assert marker.visible == {
+        "field": CONF_CONTRACT,
+        "operator": "in",
+        "value": [CONTRACT_HEURES_CREUSES, CONTRACT_TEMPO],
+    }

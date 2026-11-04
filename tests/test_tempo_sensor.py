@@ -304,3 +304,10 @@ class TestTempoNextDayCombinedSensor:
             attrs = sensor.extra_state_attributes
         assert attrs["active_source"] == "OpenDPE"
         assert attrs["tomorrow_is_white"] is True
+
+
+@pytest.mark.parametrize("cls", [TempoSensor, TempoNextDayCombinedSensor])
+def test_opts_in_to_in_place_entity_id_change(cls) -> None:
+    """HA 2026.11: custom classes overriding async_added_to_hass must define
+    async_entity_id_changed, else they are removed/re-added on rename."""
+    assert "async_entity_id_changed" in cls.__dict__

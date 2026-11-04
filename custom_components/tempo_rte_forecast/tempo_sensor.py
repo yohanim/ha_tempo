@@ -64,6 +64,14 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
             )
 
     @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Opt in to in-place entity_id changes (HA 2026.11+).
+
+        The extra listener is not keyed on entity_id, nothing to re-key.
+        """
+        super().async_entity_id_changed(old_entity_id)
+
+    @callback
     def _handle_coordinator_update(self) -> None:
         """Log state transitions and propagate the update."""
         new_state = normalize_color(self._effective_color_raw())
@@ -187,6 +195,14 @@ class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
                 self._handle_coordinator_update
             )
         )
+
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Opt in to in-place entity_id changes (HA 2026.11+).
+
+        The extra listener is not keyed on entity_id, nothing to re-key.
+        """
+        super().async_entity_id_changed(old_entity_id)
 
     @property
     def device_info(self) -> DeviceInfo:

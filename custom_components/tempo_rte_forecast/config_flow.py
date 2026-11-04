@@ -55,6 +55,27 @@ from .const import (
 )
 from .utils import normalize_contract
 
+try:
+    # HA 2026.11+: schema markers accepting a ``visible`` condition.
+    from homeassistant.data_entry_flow import Optional as _FlowOptional
+except ImportError:  # pragma: no cover - HA < 2026.11
+    _FlowOptional = None
+
+
+def _offpeak_ranges_marker() -> vol.Optional:
+    """Off-peak ranges field, shown only for contracts with off-peak hours."""
+    if _FlowOptional is None:
+        return vol.Optional(CONF_OFFPEAK_RANGES)
+    return _FlowOptional(
+        CONF_OFFPEAK_RANGES,
+        visible={
+            "field": CONF_CONTRACT,
+            "operator": "in",
+            "value": [CONTRACT_HEURES_CREUSES, CONTRACT_TEMPO],
+        },
+    )
+
+
 class OptionsFlowHandler(OptionsFlowWithReload):
     """Handle options flow; the entry reloads on save so new options apply."""
 
@@ -99,7 +120,7 @@ class OptionsFlowHandler(OptionsFlowWithReload):
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
-                    vol.Optional(CONF_OFFPEAK_RANGES): selector.TextSelector(),
+                    _offpeak_ranges_marker(): selector.TextSelector(),
                     vol.Optional(CONF_PRICE_UPDATE_INTERVAL): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=1, max=30, step=1, mode=selector.NumberSelectorMode.BOX
