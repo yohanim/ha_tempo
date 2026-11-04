@@ -1,0 +1,154 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Tempo RTE Configuration",
+        "description": "Integration for RTE Tempo colors, forecasts and electricity prices."
+      },
+      "reconfigure": {
+        "title": "Reconfigure Tempo RTE",
+        "description": "All settings are managed via the integration options (gear icon). Click Submit to confirm."
+      }
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Domain configuration",
+        "description": "Choose the domain you want to configure.",
+        "menu_options": {
+          "prices": "Contract and prices",
+          "api": "API and refresh times",
+          "retries": "Retry delays",
+          "icons": "Icon colors",
+          "finish": "Save and close"
+        }
+      },
+      "prices": {
+        "title": "Contract and Prices",
+        "data": {
+          "contract": "Contract type",
+          "subscribed_power": "Subscribed power (kVA)",
+          "offpeak_ranges": "Off-peak ranges (e.g., 22:00-06:00)",
+          "price_update_interval": "Price update interval (days)"
+        }
+      },
+      "api": {
+        "title": "API and Refresh Times",
+        "data": {
+          "tempo_day_change_time": "Tempo day change time (default: 06:00:00)",
+          "rte_tempo_color_refresh_time": "RTE API refresh time (default: 07:05:00)",
+          "edf_tempo_color_refresh_time": "EDF API refresh time (default: 11:05:00)",
+          "opendpe_service_type": "OpenDPE service type"
+        }
+      },
+      "retries": {
+        "title": "Retry Delays",
+        "data": {
+          "tempo_retry_delay_minutes": "RTE API retry delay (minutes)",
+          "forecast_retry_delay_minutes": "Forecast API retry delay (minutes)"
+        }
+      },
+      "icons": {
+        "title": "Icon Colors",
+        "data": {
+          "icon_color_blue": "Icon color: Blue",
+          "icon_color_white": "Icon color: White",
+          "icon_color_red": "Icon color: Red",
+          "icon_color_unknown": "Icon color: Unknown"
+        }
+      }
+    },
+    "error": {
+      "invalid_offpeak_ranges": "Invalid off-peak ranges. Use HH:MM-HH:MM, separated by commas (e.g. 22:00-06:00, 12:00-14:00)."
+    }
+  },
+  "selector": {
+    "contract": {
+      "options": {
+        "base": "Base",
+        "heures_creuses": "Off-peak / Peak",
+        "tempo": "Tempo"
+      }
+    },
+    "opendpe_service_type": {
+      "options": {
+        "light": "Light (JSON)",
+        "full": "Full (API)"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "tempo_color": {
+        "name": "Tempo color (J)",
+        "state": {
+          "blue": "Blue",
+          "white": "White",
+          "red": "Red",
+          "unknown": "Unknown"
+        }
+      },
+      "tempo_color_j1": {
+        "name": "Tempo color (J+1)",
+        "state": {
+          "blue": "Blue",
+          "white": "White",
+          "red": "Red",
+          "unknown": "Unknown"
+        }
+      },
+      "tempo_combined": {
+        "name": "Tempo color (J+1) (Synthesis)",
+        "state": {
+          "blue": "Blue",
+          "white": "White",
+          "red": "Red",
+          "unknown": "Unknown"
+        }
+      },
+      "tempo_forecast": {
+        "name": "Tempo forecast (J+{day})",
+        "state": {
+          "blue": "Blue",
+          "white": "White",
+          "red": "Red",
+          "unknown": "Unknown"
+        }
+      },
+      "price": {
+        "name": "Current price"
+      },
+      "specific_price": {
+        "name": "Price {period} {color}"
+      }
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Refresh data",
+      "description": "Immediately re-fetch forecast, RTE Tempo, and prices for all configured entries."
+    }
+  },
+  "device": {
+    "forecast": {
+      "name": "Open DPE forecast"
+    },
+    "prices": {
+      "name": "Electricity prices"
+    }
+  },
+  "issues": {
+    "api_unavailable": {
+      "title": "{api} unreachable for more than {hours} hours",
+      "description": "Home Assistant has not been able to fetch data from {api} for more than {hours} hours. Sensors keep showing the last known values, which may now be outdated.\n\nThis issue disappears automatically once {api} answers again. If it persists, check your internet connection or use the `tempo_rte_forecast.refresh` action."
+    },
+    "invalid_offpeak_ranges": {
+      "title": "Invalid off-peak ranges",
+      "description": "The off-peak ranges in the integration options are invalid: `{ranges}`. Invalid ranges are ignored, so off-peak prices may be wrong.\n\nOpen the integration options, then **Contract and prices**, and enter ranges as HH:MM-HH:MM separated by commas (e.g. `22:00-06:00, 12:00-14:00`)."
+    }
+  }
+}

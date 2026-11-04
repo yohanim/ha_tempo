@@ -11,8 +11,7 @@
       }
     },
     "abort": {
-      "already_configured": "L'appareil est déjà configuré",
-      "reconfigure_successful": "La reconfiguration a réussi"
+      "already_configured": "L'appareil est déjà configuré"
     }
   },
   "options": {
@@ -62,6 +61,9 @@
           "icon_color_unknown": "Couleur icône : Inconnu"
         }
       }
+    },
+    "error": {
+      "invalid_offpeak_ranges": "Plages heures creuses invalides. Utilisez HH:MM-HH:MM, séparées par des virgules (ex. 22:00-06:00, 12:00-14:00)."
     }
   },
   "selector": {
@@ -129,6 +131,24 @@
     "refresh": {
       "name": "Rafraîchir les données",
       "description": "Relance immédiatement les appels Open-DPE, RTE Tempo et grilles de prix (sans recharger l'intégration)."
+    }
+  },
+  "device": {
+    "forecast": {
+      "name": "Prévisions Open DPE"
+    },
+    "prices": {
+      "name": "Prix de l'électricité"
+    }
+  },
+  "issues": {
+    "api_unavailable": {
+      "title": "{api} injoignable depuis plus de {hours} heures",
+      "description": "Home Assistant n'arrive plus à récupérer les données de {api} depuis plus de {hours} heures. Les capteurs affichent les dernières valeurs connues, qui peuvent ne plus être à jour.\n\nCe problème disparaît automatiquement dès que {api} répond à nouveau. S'il persiste, vérifiez votre connexion internet ou utilisez l'action `tempo_rte_forecast.refresh`."
+    },
+    "invalid_offpeak_ranges": {
+      "title": "Plages heures creuses invalides",
+      "description": "Les plages heures creuses des options de l'intégration sont invalides : `{ranges}`. Les plages invalides sont ignorées, les prix heures creuses peuvent donc être faux.\n\nOuvrez les options de l'intégration, puis **Paramètres du contrat et des prix**, et saisissez les plages au format HH:MM-HH:MM séparées par des virgules (ex. `22:00-06:00, 12:00-14:00`)."
     }
   }
 }

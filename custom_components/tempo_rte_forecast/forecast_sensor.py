@@ -4,21 +4,17 @@ from typing import Any
 from dataclasses import asdict
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .utils import get_tempo_date, normalize_color, get_icon_color
 from .const import (
-    DOMAIN,
-    DEVICE_MANUFACTURER,
-    DEVICE_MODEL,
     COLORS,
-    DEVICE_NAME,
     CONF_TEMPO_DAY_CHANGE_TIME,
     TEMPO_DAY_CHANGE_TIME,
 )
 
 from .forecast_coordinator import ForecastCoordinator
+from .devices import CHILD_FORECAST, child_device_info
 
 class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
     """OpenDPE forecast sensor."""
@@ -32,16 +28,8 @@ class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
         self.index = index + 1
         self.tempo_day_change_time_str = entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
         self._attr_unique_id = f"{entry.entry_id}_forecast_opendpe_j{self.index}"
+        self._attr_device_info = child_device_info(entry, CHILD_FORECAST)
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device info shared by all forecast sensors."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.entry.entry_id)},
-            name=DEVICE_NAME,
-            manufacturer=DEVICE_MANUFACTURER,
-            model=DEVICE_MODEL,
-        )
 
     @property
     def translation_placeholders(self) -> dict[str, Any]:

@@ -1,5 +1,5 @@
 {
-  "homeassistant": "2026.3.0",
+  "homeassistant": "2026.10.0",
   "name": "Tempo RTE & Open DPE Forecast",
   "render_readme": true
 }

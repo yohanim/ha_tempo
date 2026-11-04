@@ -166,13 +166,20 @@ def test_config_steps_include_reconfigure(strings: dict, fr_strings: dict) -> No
 
 
 def test_config_abort_keys(strings: dict, fr_strings: dict) -> None:
-    """Both files must carry the standard abort keys, including reconfigure_successful."""
-    expected = {"already_configured", "reconfigure_successful"}
-    assert expected <= set(strings["config"]["abort"])
-    assert expected <= set(fr_strings["config"]["abort"])
+    """already_configured stays local; reconfigure_successful is translated by
+    core since HA 2026.10 (central abort reasons) and must not be duplicated."""
+    assert "already_configured" in strings["config"]["abort"]
+    assert "reconfigure_successful" not in strings["config"]["abort"]
     assert set(strings["config"]["abort"]) == set(fr_strings["config"]["abort"])
 
 
 def test_localized_color_label_fr_and_en() -> None:
     assert localized_color_label("blue", "fr") == "Bleu"
     assert localized_color_label("blue", "en") == "blue"
+
+
+def test_en_translation_matches_strings(strings: dict) -> None:
+    """Custom integrations are translated at runtime from translations/<lang>.json
+    only (strings.json is a source file), so en.json must mirror strings.json."""
+    en = json.loads((TRANSLATIONS_DIR / "en.json").read_text(encoding="utf-8"))
+    assert en == strings

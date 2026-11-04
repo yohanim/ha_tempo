@@ -11,8 +11,7 @@
       }
     },
     "abort": {
-      "already_configured": "Device is already configured",
-      "reconfigure_successful": "Re-configuration was successful"
+      "already_configured": "Device is already configured"
     }
   },
   "options": {
@@ -62,6 +61,9 @@
           "icon_color_unknown": "Icon color: Unknown"
         }
       }
+    },
+    "error": {
+      "invalid_offpeak_ranges": "Invalid off-peak ranges. Use HH:MM-HH:MM, separated by commas (e.g. 22:00-06:00, 12:00-14:00)."
     }
   },
   "selector": {
@@ -129,6 +131,24 @@
     "refresh": {
       "name": "Refresh data",
       "description": "Immediately re-fetch forecast, RTE Tempo, and prices for all configured entries."
+    }
+  },
+  "device": {
+    "forecast": {
+      "name": "Open DPE forecast"
+    },
+    "prices": {
+      "name": "Electricity prices"
+    }
+  },
+  "issues": {
+    "api_unavailable": {
+      "title": "{api} unreachable for more than {hours} hours",
+      "description": "Home Assistant has not been able to fetch data from {api} for more than {hours} hours. Sensors keep showing the last known values, which may now be outdated.\n\nThis issue disappears automatically once {api} answers again. If it persists, check your internet connection or use the `tempo_rte_forecast.refresh` action."
+    },
+    "invalid_offpeak_ranges": {
+      "title": "Invalid off-peak ranges",
+      "description": "The off-peak ranges in the integration options are invalid: `{ranges}`. Invalid ranges are ignored, so off-peak prices may be wrong.\n\nOpen the integration options, then **Contract and prices**, and enter ranges as HH:MM-HH:MM separated by commas (e.g. `22:00-06:00, 12:00-14:00`)."
     }
   }
 }

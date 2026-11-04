@@ -5,11 +5,11 @@ from typing import Any
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CURRENCY_EURO
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, DEVICE_NAME, DEVICE_MANUFACTURER, DEVICE_MODEL, COLORS, CONTRACT_TEMPO, CONTRACT_BASE
+from .const import COLORS, CONTRACT_TEMPO, CONTRACT_BASE
 from .prices_coordinator import PriceCoordinator
+from .devices import CHILD_PRICES, child_device_info
 from .utils import get_icon_color, normalize_color, localized_color_label
 
 class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
@@ -26,16 +26,8 @@ class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
         super().__init__(coordinator)
         self.entry = entry
         self._attr_unique_id = f"{entry.entry_id}_current_price"
+        self._attr_device_info = child_device_info(entry, CHILD_PRICES)
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device info."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.entry.entry_id)},
-            name=DEVICE_NAME,
-            manufacturer=DEVICE_MANUFACTURER,
-            model=DEVICE_MODEL,
-        )
 
     @property
     def native_value(self) -> float | None:
@@ -95,6 +87,7 @@ class SpecificPriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
             slug_parts.append(self._color)
 
         self._attr_unique_id = f"{entry.entry_id}_{'_'.join(slug_parts)}"
+        self._attr_device_info = child_device_info(entry, CHILD_PRICES)
 
     @property
     def translation_placeholders(self) -> dict[str, Any]:
@@ -106,15 +99,6 @@ class SpecificPriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
             "color": color_label,
         }
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device info."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.entry.entry_id)},
-            name=DEVICE_NAME,
-            manufacturer=DEVICE_MANUFACTURER,
-            model=DEVICE_MODEL,
-        )
 
     @property
     def native_value(self) -> float | None:

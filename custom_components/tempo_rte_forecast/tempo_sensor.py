@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
 import logging
 from typing import Any
 
 from .tempo_coordinator import TempoDataCoordinator
+from .devices import main_device_info
 from .forecast_coordinator import ForecastCoordinator
 from .utils import (
     get_tempo_date,
@@ -16,10 +16,6 @@ from .utils import (
     get_icon_color,
 )
 from .const import (
-    DOMAIN,
-    DEVICE_NAME,
-    DEVICE_MANUFACTURER,
-    DEVICE_MODEL,
     COLORS,
     CONF_TEMPO_DAY_CHANGE_TIME,
     TEMPO_DAY_CHANGE_TIME,
@@ -46,6 +42,7 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
         self.index = index
         self.tempo_day_change_time_str = entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
         self._attr_unique_id = f"{entry.entry_id}_J{'' if (index == 0) else '+1'}"
+        self._attr_device_info = main_device_info(entry)
         self._last_state = None
         self._forecast_coordinator = forecast_coordinator
 
@@ -92,15 +89,6 @@ class TempoSensor(CoordinatorEntity, SensorEntity):
                 return fd.color
         return None
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device info shared by all forecast sensors."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.entry.entry_id)},
-            name=DEVICE_NAME,
-            manufacturer=DEVICE_MANUFACTURER,
-            model=DEVICE_MODEL,
-        )
 
     @property
     def translation_placeholders(self) -> dict[str, Any]:
@@ -180,6 +168,7 @@ class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
         self.tempo_day_change_time_str = entry.options.get(CONF_TEMPO_DAY_CHANGE_TIME, TEMPO_DAY_CHANGE_TIME)
         
         self._attr_unique_id = f"{entry.entry_id}_J1_combined"
+        self._attr_device_info = main_device_info(entry)
 
     @property
     def translation_placeholders(self) -> dict[str, Any]:
@@ -204,14 +193,6 @@ class TempoNextDayCombinedSensor(CoordinatorEntity, SensorEntity):
         """
         super().async_entity_id_changed(old_entity_id)
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.entry.entry_id)},
-            name=DEVICE_NAME,
-            manufacturer=DEVICE_MANUFACTURER,
-            model=DEVICE_MODEL,
-        )
 
     @property
     def available(self) -> bool:

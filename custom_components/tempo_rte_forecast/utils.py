@@ -51,6 +51,21 @@ def parse_offpeak_ranges(ranges_str: str) -> list[tuple[time, time]]:
             _LOGGER.error("Plage horaire invalide '%s': %s", part, e)
     return ranges
 
+def invalid_offpeak_parts(ranges_str: str | None) -> list[str]:
+    """Return the comma-separated parts of ranges_str that are not HH:MM-HH:MM."""
+    invalid = []
+    for part in (ranges_str or "").split(','):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            start_str, end_str = part.split('-')
+            time.fromisoformat(start_str.strip())
+            time.fromisoformat(end_str.strip())
+        except ValueError:
+            invalid.append(part)
+    return invalid
+
 def is_offpeak(now: datetime, offpeak_ranges: list[tuple[time, time]]) -> bool:
     """Check if the current time is within any of the off-peak ranges."""
     current_time = now.time()

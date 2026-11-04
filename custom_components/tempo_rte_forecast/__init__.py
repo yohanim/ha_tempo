@@ -20,7 +20,14 @@ from homeassistant.helpers.storage import Store
 from .const import (
     DOMAIN
 )
+from .devices import async_register_main_device
 from .forecast_coordinator import ForecastCoordinator
+from .issues import (
+    async_check_offpeak_ranges,
+    async_delete_all_issues,
+    async_delete_api_issues,
+    async_track_api_outage,
+)
 from .prices_coordinator import PriceCoordinator
 from .tempo_coordinator import TempoDataCoordinator
 
@@ -99,6 +106,7 @@ class TempoRuntimeData:
     tempo_coordinator: TempoDataCoordinator
     forecast_coordinator: ForecastCoordinator
     price_coordinator: PriceCoordinator
+    main_device_id: str
 
 
 type TempoConfigEntry = ConfigEntry[TempoRuntimeData]
@@ -151,9 +159,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> boo
         tempo_coordinator=tempo_coordinator,
         forecast_coordinator=forecast_coordinator,
         price_coordinator=price_coordinator,
+        # Child devices (forecast, prices) reference the main device by id.
+        main_device_id=async_register_main_device(hass, entry),
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Repair issues: long API outages (hidden by cached values) and invalid
+    # off-peak ranges saved by older versions.
+    entry.async_on_unload(
+        async_track_api_outage(hass, tempo_coordinator, "rte", "RTE")
+    )
+    entry.async_on_unload(
+        async_track_api_outage(hass, forecast_coordinator, "opendpe", "Open DPE")
+    )
+    async_check_offpeak_ranges(hass, entry)
 
     await _async_ensure_refresh_service(hass)
 
@@ -215,6 +235,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> bo
         await entry.runtime_data.price_coordinator.async_shutdown()
     if unload_ok:
         _remove_refresh_service_if_last(hass, entry_id)
+        async_delete_api_issues(hass)
     return unload_ok
 
 
@@ -222,3 +243,4 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Delete this entry's cached data stores from disk."""
     await Store(hass, 1, f"{DOMAIN}_{entry.entry_id}_prices_cache").async_remove()
     await Store(hass, 1, f"{DOMAIN}_{entry.entry_id}_tempo_cache").async_remove()
+    async_delete_all_issues(hass)

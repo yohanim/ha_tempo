@@ -57,7 +57,7 @@ async def test_step_reconfigure_no_input_shows_form() -> None:
 
 @pytest.mark.asyncio
 async def test_step_reconfigure_with_input_calls_abort() -> None:
-    """Submitting the reconfigure form must abort with reason 'reconfigure_successful'."""
+    """Submitting the reconfigure form aborts with core's default reason (central translation)."""
     flow = TempoConfigFlow.__new__(TempoConfigFlow)
     mock_entry = MagicMock()
     flow._get_reconfigure_entry = MagicMock(return_value=mock_entry)
@@ -68,7 +68,7 @@ async def test_step_reconfigure_with_input_calls_abort() -> None:
     result = await flow.async_step_reconfigure(user_input={})
 
     flow.async_update_reload_and_abort.assert_called_once_with(
-        mock_entry, reason="reconfigure_successful"
+        mock_entry
     )
     assert result["reason"] == "reconfigure_successful"
 

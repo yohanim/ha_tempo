@@ -53,7 +53,7 @@ from .const import (
     DEFAULT_ICON_COLOR_RED,
     DEFAULT_ICON_COLOR_UNKNOWN,
 )
-from .utils import normalize_contract
+from .utils import invalid_offpeak_parts, normalize_contract
 
 try:
     # HA 2026.11+: schema markers accepting a ``visible`` condition.
@@ -94,16 +94,26 @@ class OptionsFlowHandler(OptionsFlowWithReload):
 
     async def async_step_prices(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage price settings."""
+        errors: dict[str, str] = {}
         if user_input is not None:
             if CONF_CONTRACT in user_input:
                 user_input = {
                     **user_input,
                     CONF_CONTRACT: normalize_contract(user_input[CONF_CONTRACT]),
                 }
-            self._data.update(user_input)
-            return await self.async_step_init()
+            contract = user_input.get(
+                CONF_CONTRACT, self._data.get(CONF_CONTRACT, DEFAULT_CONTRACT)
+            )
+            if contract != CONTRACT_BASE and invalid_offpeak_parts(
+                user_input.get(CONF_OFFPEAK_RANGES)
+            ):
+                errors[CONF_OFFPEAK_RANGES] = "invalid_offpeak_ranges"
+            else:
+                self._data.update(user_input)
+                return await self.async_step_init()
 
         return self.async_show_form(
+            errors=errors,
             step_id="prices",
             data_schema=self.add_suggested_values_to_schema(
                 vol.Schema({
@@ -134,6 +144,8 @@ class OptionsFlowHandler(OptionsFlowWithReload):
                     CONF_SUBSCRIBED_POWER: self._data.get(CONF_SUBSCRIBED_POWER, DEFAULT_SUBSCRIBED_POWER),
                     CONF_OFFPEAK_RANGES: self._data.get(CONF_OFFPEAK_RANGES, DEFAULT_OFFPEAK_RANGES),
                     CONF_PRICE_UPDATE_INTERVAL: int(self._data.get(CONF_PRICE_UPDATE_INTERVAL) or DEFAULT_PRICE_UPDATE_INTERVAL),
+                    # Keep what the user typed when the form is shown again with an error.
+                    **(user_input or {}),
                 }
             ),
         )
@@ -243,7 +255,6 @@ class TempoConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             return self.async_update_reload_and_abort(
                 self._get_reconfigure_entry(),
-                reason="reconfigure_successful",
             )
         return self.async_show_form(
             step_id="reconfigure",
