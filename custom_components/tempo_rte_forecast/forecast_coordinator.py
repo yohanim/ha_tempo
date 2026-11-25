@@ -1,32 +1,42 @@
 from __future__ import annotations
 
+import json
 import logging
 from datetime import date, datetime
-import json
 
 import aiohttp
-
-from homeassistant.core import HomeAssistant
+from babel.core import UnknownLocaleError
+from babel.dates import format_date, get_date_format
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_change
-from babel.dates import format_date, get_date_format
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .coordinator_retry import RetryWhenNoUpdateIntervalMixin
-from .sensor_types import ForecastSensor, ForecastDayLight, ForecastDay
 from .const import (
-    OPEN_DPE_LIGHT_URL,
-    OPEN_DPE_FULL_URL,
-    FORECAST_RETRY_DELAY_MINUTES,
+    COLORS,
     CONF_FORECAST_RETRY_DELAY,
     CONF_OPENDPE_SERVICE_TYPE,
-    OPENDPE_SERVICE_LIGHT,
+    FORECAST_RETRY_DELAY_MINUTES,
+    OPEN_DPE_FULL_URL,
+    OPEN_DPE_LIGHT_URL,
     OPENDPE_SERVICE_FULL,
-    COLORS,
+    OPENDPE_SERVICE_LIGHT,
 )
+from .coordinator_retry import RetryWhenNoUpdateIntervalMixin
+from .sensor_types import ForecastDay, ForecastDayLight, ForecastSensor
 
 _LOGGER = logging.getLogger(__name__)
+
+# A malformed Open DPE row (missing or wrongly typed field, bad date) is skipped
+# with a warning instead of dropping the whole forecast.
+FORECAST_ROW_ERRORS = (
+    AttributeError,
+    KeyError,
+    TypeError,
+    UnknownLocaleError,
+    ValueError,
+)
 
 class ForecastCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator):
     """Coordinator in charge of fetching Open-DPE forecasts."""
@@ -128,8 +138,8 @@ def _format_all_dates(self: ForecastCoordinator, data: list[ForecastDayLight] | 
         # Nettoyage des doubles séparateurs éventuels (ex: // ou ..)
         for sep in ["/", ".", "-", " "]:
             date_fmt = date_fmt.replace(sep + sep, sep)
-    except Exception:
-        pass
+    except (UnknownLocaleError, ValueError) as exc:
+        _LOGGER.debug("Open DPE: locale %r inconnue, format %s par défaut (%s)", lang, date_fmt, exc)
 
     for f_date in data:
         try:
@@ -148,9 +158,9 @@ def _format_all_dates(self: ForecastCoordinator, data: list[ForecastDayLight] | 
 
                 if p_blue or p_white or p_red:
                     probs = []
-                    if p_blue > 0: probs.append((int(round(p_blue * 100)), COLORS["blue"]["emoji"]))
-                    if p_white > 0: probs.append((int(round(p_white * 100)), COLORS["white"]["emoji"]))
-                    if p_red > 0: probs.append((int(round(p_red * 100)), COLORS["red"]["emoji"]))
+                    if p_blue > 0: probs.append((round(p_blue * 100), COLORS["blue"]["emoji"]))
+                    if p_white > 0: probs.append((round(p_white * 100), COLORS["white"]["emoji"]))
+                    if p_red > 0: probs.append((round(p_red * 100), COLORS["red"]["emoji"]))
 
                     probs.sort(key=lambda x: x[0], reverse=True)
 
@@ -158,7 +168,7 @@ def _format_all_dates(self: ForecastCoordinator, data: list[ForecastDayLight] | 
                     prob = " ".join(str(p[0]) for p in probs)
 
             if isinstance(prob, (int, float)):
-                prob = int(round(prob * 100))
+                prob = round(prob * 100)
 
             forecast_date = date.fromisoformat(f_date["date"])
             sensor_item = ForecastSensor(
@@ -170,7 +180,7 @@ def _format_all_dates(self: ForecastCoordinator, data: list[ForecastDayLight] | 
                 )
             forecasts[f_date["date"]] = sensor_item
             self._cached_data[f_date["date"]] = sensor_item
-        except Exception as exc:
+        except FORECAST_ROW_ERRORS as exc:
             _LOGGER.warning("Open DPE: ligne ignorée (%s) : %s", exc, f_date)
             continue
     return forecasts

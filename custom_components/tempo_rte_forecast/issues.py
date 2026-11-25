@@ -1,8 +1,9 @@
 """Repair issues (Settings > Repairs) for problems the sensors hide.
 
 Sensors keep showing cached values when an API fails, so a long outage would
-otherwise go unnoticed. Issues are created without ``config_entry_id`` (HA
-2026.11+ only); they are deleted on unload and on entry removal instead.
+otherwise go unnoticed. Issues are tied to the config entry: Home Assistant
+deletes them with the entry and hides them while it is disabled. API outage
+issues are also deleted on unload, since a reload restarts the outage clock.
 """
 
 from __future__ import annotations
@@ -39,6 +40,7 @@ def api_issue_id(api_key: str) -> str:
 @callback
 def async_track_api_outage(
     hass: HomeAssistant,
+    entry: ConfigEntry,
     coordinator: DataUpdateCoordinator,
     api_key: str,
     api_name: str,
@@ -65,6 +67,7 @@ def async_track_api_outage(
                 hass,
                 DOMAIN,
                 issue_id,
+                config_entry_id=entry.entry_id,
                 is_fixable=False,
                 severity=ir.IssueSeverity.WARNING,
                 translation_key="api_unavailable",
@@ -99,6 +102,7 @@ def async_check_offpeak_ranges(hass: HomeAssistant, entry: ConfigEntry) -> None:
         hass,
         DOMAIN,
         ISSUE_INVALID_OFFPEAK,
+        config_entry_id=entry.entry_id,
         is_fixable=False,
         severity=ir.IssueSeverity.WARNING,
         translation_key=ISSUE_INVALID_OFFPEAK,
@@ -111,10 +115,3 @@ def async_delete_api_issues(hass: HomeAssistant) -> None:
     """Delete API outage issues (entry unloaded: nothing is fetching anymore)."""
     for api_key in API_KEYS:
         ir.async_delete_issue(hass, DOMAIN, api_issue_id(api_key))
-
-
-@callback
-def async_delete_all_issues(hass: HomeAssistant) -> None:
-    """Delete every issue of the integration (entry removed)."""
-    async_delete_api_issues(hass)
-    ir.async_delete_issue(hass, DOMAIN, ISSUE_INVALID_OFFPEAK)

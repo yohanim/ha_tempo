@@ -1,38 +1,38 @@
 from __future__ import annotations
 
 import asyncio
-import logging
-from datetime import date, datetime, time
-from collections.abc import Sequence
-from typing import Any
-import aiohttp
 import json
+import logging
+from collections.abc import Sequence
+from datetime import date, datetime, time
+from typing import Any
 
-from homeassistant.core import HomeAssistant
+import aiohttp
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .coordinator_retry import RetryWhenNoUpdateIntervalMixin
 from .const import (
-    DOMAIN,
-    TEMPO_TIMEZONE,
-    TEMPO_DAY_CHANGE_TIME,
-    RTE_API_URL,
-    RTE_API_FULL_URL,
-    COULEUR_TEMPO_API_BASE,
-    STORE_SAVE_DELAY,
-    TEMPO_RETRY_DELAY_MINUTES,
+    CONF_EDF_TEMPO_COLOR_REFRESH_TIME,
+    CONF_RTE_TEMPO_COLOR_REFRESH_TIME,
     CONF_TEMPO_DAY_CHANGE_TIME,
     CONF_TEMPO_RETRY_DELAY,
-    CONF_RTE_TEMPO_COLOR_REFRESH_TIME,
-    DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME,
-    CONF_EDF_TEMPO_COLOR_REFRESH_TIME,
+    COULEUR_TEMPO_API_BASE,
     DEFAULT_EDF_TEMPO_COLOR_REFRESH_TIME,
+    DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME,
+    DOMAIN,
+    RTE_API_FULL_URL,
+    RTE_API_URL,
+    STORE_SAVE_DELAY,
+    TEMPO_DAY_CHANGE_TIME,
+    TEMPO_RETRY_DELAY_MINUTES,
+    TEMPO_TIMEZONE,
 )
+from .coordinator_retry import RetryWhenNoUpdateIntervalMixin
 from .utils import get_tempo_date, get_tempo_season
 
 _LOGGER = logging.getLogger(__name__)
@@ -243,8 +243,10 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
         except aiohttp.ClientError as err:
             _LOGGER.error("%s Erreur de connexion: %s", log_prefix, err)
             return None
-        except Exception as err:
-            _LOGGER.error("%s Erreur inattendue: %s", log_prefix, err, exc_info=True)
+        except Exception:
+            # Safety net: an unexpected error must not break the fallback chain
+            # (Light -> buffer -> Full API); logged with its traceback.
+            _LOGGER.exception("%s Erreur inattendue", log_prefix)
             return None
 
     async def _fetch_rte_data(self, url: str) -> dict[str, Any] | None:
@@ -359,7 +361,7 @@ class TempoDataCoordinator(RetryWhenNoUpdateIntervalMixin, DataUpdateCoordinator
             _LOGGER.debug("[API] Nombre d'entrées dans 'values': %s", len(values))
             if _LOGGER.isEnabledFor(logging.DEBUG):
                 sorted_dates = sorted(values.keys())[-5:]
-                _LOGGER.debug("[API] 5 dernières dates: %s", dict((d, values[d]) for d in sorted_dates))
+                _LOGGER.debug("[API] 5 dernières dates: %s", {d: values[d] for d in sorted_dates})
 
             # Valide et met en cache les données
             if self._validate_and_cache_data(values):

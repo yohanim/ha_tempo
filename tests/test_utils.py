@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from custom_components.tempo_rte_forecast.const import CONTRACT_TEMPO
 from custom_components.tempo_rte_forecast.utils import (
     get_color_code,
     get_color_emoji,
@@ -21,7 +22,6 @@ from custom_components.tempo_rte_forecast.utils import (
     normalize_contract,
     parse_offpeak_ranges,
 )
-from custom_components.tempo_rte_forecast.const import CONTRACT_TEMPO
 
 PARIS = ZoneInfo("Europe/Paris")
 

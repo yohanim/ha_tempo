@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from homeassistant.helpers.update_coordinator import UpdateFailed
+from tests.conftest import make_ctx_response
 
 from custom_components.tempo_rte_forecast.const import CONF_FORECAST_RETRY_DELAY
 from custom_components.tempo_rte_forecast.forecast_coordinator import (
@@ -14,7 +15,6 @@ from custom_components.tempo_rte_forecast.forecast_coordinator import (
     async_fetch_opendpe_forecast,
 )
 from custom_components.tempo_rte_forecast.sensor_types import ForecastSensor
-from tests.conftest import make_ctx_response
 
 
 @pytest.mark.asyncio

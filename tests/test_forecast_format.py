@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from custom_components.tempo_rte_forecast.const import (
+    OPENDPE_SERVICE_FULL,
+    OPENDPE_SERVICE_LIGHT,
+)
 from custom_components.tempo_rte_forecast.forecast_coordinator import (
     ForecastCoordinator,
     _format_all_dates,
 )
-from custom_components.tempo_rte_forecast.const import OPENDPE_SERVICE_LIGHT, OPENDPE_SERVICE_FULL
 from custom_components.tempo_rte_forecast.sensor_types import ForecastSensor
 
 

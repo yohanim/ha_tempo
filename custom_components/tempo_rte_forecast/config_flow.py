@@ -5,8 +5,8 @@ Copyright (C) 2025 Christophe Bansart
 from __future__ import annotations
 
 from typing import Any
-import voluptuous as vol
 
+import voluptuous as vol
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -15,58 +15,51 @@ from homeassistant.config_entries import (
     OptionsFlowWithReload,
 )
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import Optional as FlowOptional
 from homeassistant.helpers import selector
 
 from .const import (
-    DOMAIN,
-    DEVICE_NAME,
-    TEMPO_RETRY_DELAY_MINUTES,
-    FORECAST_RETRY_DELAY_MINUTES,
-    CONF_TEMPO_DAY_CHANGE_TIME,
-    TEMPO_DAY_CHANGE_TIME,
-    CONF_TEMPO_RETRY_DELAY,
-    CONF_FORECAST_RETRY_DELAY,
-    CONF_OPENDPE_SERVICE_TYPE,
-    OPENDPE_SERVICE_LIGHT,
-    OPENDPE_SERVICE_FULL,
-    CONF_RTE_TEMPO_COLOR_REFRESH_TIME,
-    DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME,
-    CONF_EDF_TEMPO_COLOR_REFRESH_TIME,
-    DEFAULT_EDF_TEMPO_COLOR_REFRESH_TIME,
     CONF_CONTRACT,
+    CONF_EDF_TEMPO_COLOR_REFRESH_TIME,
+    CONF_FORECAST_RETRY_DELAY,
+    CONF_ICON_COLOR_BLUE,
+    CONF_ICON_COLOR_RED,
+    CONF_ICON_COLOR_UNKNOWN,
+    CONF_ICON_COLOR_WHITE,
+    CONF_OFFPEAK_RANGES,
+    CONF_OPENDPE_SERVICE_TYPE,
+    CONF_PRICE_UPDATE_INTERVAL,
+    CONF_RTE_TEMPO_COLOR_REFRESH_TIME,
+    CONF_SUBSCRIBED_POWER,
+    CONF_TEMPO_DAY_CHANGE_TIME,
+    CONF_TEMPO_RETRY_DELAY,
     CONTRACT_BASE,
     CONTRACT_HEURES_CREUSES,
     CONTRACT_TEMPO,
     DEFAULT_CONTRACT,
-    CONF_OFFPEAK_RANGES,
-    DEFAULT_OFFPEAK_RANGES,
-    CONF_SUBSCRIBED_POWER,
-    DEFAULT_SUBSCRIBED_POWER,
-    CONF_PRICE_UPDATE_INTERVAL,
-    DEFAULT_PRICE_UPDATE_INTERVAL,
-    CONF_ICON_COLOR_BLUE,
-    CONF_ICON_COLOR_WHITE,
-    CONF_ICON_COLOR_RED,
-    CONF_ICON_COLOR_UNKNOWN,
+    DEFAULT_EDF_TEMPO_COLOR_REFRESH_TIME,
     DEFAULT_ICON_COLOR_BLUE,
-    DEFAULT_ICON_COLOR_WHITE,
     DEFAULT_ICON_COLOR_RED,
     DEFAULT_ICON_COLOR_UNKNOWN,
+    DEFAULT_ICON_COLOR_WHITE,
+    DEFAULT_OFFPEAK_RANGES,
+    DEFAULT_PRICE_UPDATE_INTERVAL,
+    DEFAULT_RTE_TEMPO_COLOR_REFRESH_TIME,
+    DEFAULT_SUBSCRIBED_POWER,
+    DEVICE_NAME,
+    DOMAIN,
+    FORECAST_RETRY_DELAY_MINUTES,
+    OPENDPE_SERVICE_FULL,
+    OPENDPE_SERVICE_LIGHT,
+    TEMPO_DAY_CHANGE_TIME,
+    TEMPO_RETRY_DELAY_MINUTES,
 )
 from .utils import invalid_offpeak_parts, normalize_contract
-
-try:
-    # HA 2026.11+: schema markers accepting a ``visible`` condition.
-    from homeassistant.data_entry_flow import Optional as _FlowOptional
-except ImportError:  # pragma: no cover - HA < 2026.11
-    _FlowOptional = None
 
 
 def _offpeak_ranges_marker() -> vol.Optional:
     """Off-peak ranges field, shown only for contracts with off-peak hours."""
-    if _FlowOptional is None:
-        return vol.Optional(CONF_OFFPEAK_RANGES)
-    return _FlowOptional(
+    return FlowOptional(
         CONF_OFFPEAK_RANGES,
         visible={
             "field": CONF_CONTRACT,

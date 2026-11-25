@@ -1,22 +1,26 @@
 from __future__ import annotations
-from datetime import date, datetime, timedelta, time
+
 import logging
+from datetime import date, datetime, time, timedelta
+
 from homeassistant.util import dt as dt_util
+
 from .const import (
-    TEMPO_TIMEZONE,
-    TEMPO_DAY_CHANGE_TIME,
     COLORS,
     CONF_ICON_COLOR_BLUE,
-    CONF_ICON_COLOR_WHITE,
     CONF_ICON_COLOR_RED,
     CONF_ICON_COLOR_UNKNOWN,
+    CONF_ICON_COLOR_WHITE,
+    DEFAULT_CONTRACT,
     DEFAULT_ICON_COLOR_BLUE,
-    DEFAULT_ICON_COLOR_WHITE,
     DEFAULT_ICON_COLOR_RED,
     DEFAULT_ICON_COLOR_UNKNOWN,
+    DEFAULT_ICON_COLOR_WHITE,
     LEGACY_CONTRACT_MAP,
-    DEFAULT_CONTRACT,
+    TEMPO_DAY_CHANGE_TIME,
+    TEMPO_TIMEZONE,
 )
+
 
 def get_tempo_date(offset_days: int = 0, tempo_day_change_time_str: str = TEMPO_DAY_CHANGE_TIME) -> str:
     _LOGGER = logging.getLogger(__name__)

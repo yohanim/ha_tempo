@@ -15,13 +15,10 @@ from .const import (
     DEFAULT_CONTRACT,
     NUM_FORECAST_DAYS,
 )
-from .utils import normalize_contract
-
-from .tempo_sensor import TempoSensor, TempoNextDayCombinedSensor
-
 from .forecast_sensor import OpenDPEForecastSensor
-
 from .prices_sensor import PriceSensor, SpecificPriceSensor
+from .tempo_sensor import TempoNextDayCombinedSensor, TempoSensor
+from .utils import normalize_contract
 
 
 async def async_setup_entry(

@@ -1,10 +1,10 @@
 # Home Assistant - Tempo RTE Integration, Forecasts & Prices
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
 [![GitHub release](https://img.shields.io/github/release/yohanim/ha_tempo.svg)](https://github.com/yohanim/ha_tempo/releases)
-[![License](https://img.shields.io/github/license/yohanim/ha_tempo.svg)](LICENSE.md)
+[![Validate](https://github.com/yohanim/ha_tempo/actions/workflows/validate.yml/badge.svg)](https://github.com/yohanim/ha_tempo/actions/workflows/validate.yml)
+[![License](https://img.shields.io/github/license/yohanim/ha_tempo.svg)](LICENSE)
 
-[![Open your Home Assistant instance and add this repository to HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=yohanim&repository=ha_tempo&category=integration)
+[![Open your Home Assistant instance and open this repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=yohanim&repository=ha_tempo&category=integration)
 
 [![Open your Home Assistant instance and configure the integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=tempo_rte_forecast)
 
@@ -19,9 +19,14 @@ It retrieves data from several reliable sources to provide a complete set of sen
 
 ## 📦 Installation
 
-Use the blue buttons above to install the integration via HACS then add it from the Home Assistant integrations page.
+**Requires Home Assistant 2026.11 or newer** (stay on 2.7.x for 2026.10).
 
-**Home Assistant 2026.11+**: HACS is now built in as the **Marketplace** (*Settings → Marketplace*). Select **Add from link** and enter `yohanim/ha_tempo` (a GitHub connection is required for custom repositories). The button above still works and opens the repository in the Marketplace; existing HACS installs are migrated automatically.
+Since Home Assistant 2026.11, HACS is built in as the **Marketplace** (*Settings → Marketplace*); existing HACS installs are migrated automatically.
+
+1. Use the **Open in the Marketplace** button above, or in *Settings → Marketplace* select **Add from link** and enter `yohanim/ha_tempo` (a GitHub connection is required for custom repositories).
+2. Click **Download**. The first install needs no restart: you are taken straight to the setup of the integration (or use the **Add integration** button above).
+
+Updates are offered under *Settings → Updates* with the release notes; **updates still require a restart** (the Marketplace raises a repair with a restart button).
 
 **Manual installation**: Copy the contents of the `custom_components/tempo_rte_forecast/` folder to your Home Assistant `custom_components` folder, then restart.
 
@@ -215,9 +220,14 @@ Elle récupère les données depuis plusieurs sources fiables pour fournir un en
 
 ## 📦 Installation
 
-Utilisez les boutons bleus en haut de page pour installer l'intégration via HACS puis l'ajouter depuis la page des intégrations de Home Assistant.
+**Nécessite Home Assistant 2026.11 ou plus récent** (restez en 2.7.x pour 2026.10).
 
-**Home Assistant 2026.11+** : HACS est désormais intégré sous le nom **Marketplace** (*Paramètres → Marketplace*). Sélectionnez **Ajouter depuis un lien** et saisissez `yohanim/ha_tempo` (une connexion GitHub est requise pour les dépôts personnalisés). Le bouton ci-dessus fonctionne toujours et ouvre le dépôt dans le Marketplace ; les installations HACS existantes sont migrées automatiquement.
+Depuis Home Assistant 2026.11, HACS est intégré sous le nom **Marketplace** (*Paramètres → Marketplace*) ; les installations HACS existantes sont migrées automatiquement.
+
+1. Utilisez le bouton **Ouvrir dans le Marketplace** en haut de page, ou dans *Paramètres → Marketplace* sélectionnez **Ajouter depuis un lien** et saisissez `yohanim/ha_tempo` (une connexion GitHub est requise pour les dépôts personnalisés).
+2. Cliquez sur **Télécharger**. La première installation ne demande pas de redémarrage : vous arrivez directement sur la configuration de l'intégration (ou utilisez le bouton **Ajouter l'intégration** en haut de page).
+
+Les mises à jour apparaissent dans *Paramètres → Mises à jour* avec les notes de version ; **elles demandent toujours un redémarrage** (le Marketplace crée une réparation avec un bouton de redémarrage).
 
 **Installation manuelle** : Copiez le contenu du dossier `custom_components/tempo_rte_forecast/` dans votre dossier `custom_components` de Home Assistant, puis redémarrez.
 

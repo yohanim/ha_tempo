@@ -1,24 +1,25 @@
 from __future__ import annotations
 
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import callback
 import logging
 from typing import Any
 
-from .tempo_coordinator import TempoDataCoordinator
-from .devices import main_device_info
-from .forecast_coordinator import ForecastCoordinator
-from .utils import (
-    get_tempo_date,
-    normalize_color,
-    get_icon_color,
-)
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import callback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
 from .const import (
     COLORS,
     CONF_TEMPO_DAY_CHANGE_TIME,
     TEMPO_DAY_CHANGE_TIME,
+)
+from .devices import main_device_info
+from .forecast_coordinator import ForecastCoordinator
+from .tempo_coordinator import TempoDataCoordinator
+from .utils import (
+    get_icon_color,
+    get_tempo_date,
+    normalize_color,
 )
 
 _LOGGER = logging.getLogger(__name__)

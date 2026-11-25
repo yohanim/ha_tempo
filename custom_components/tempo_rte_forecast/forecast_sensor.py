@@ -1,20 +1,21 @@
 from __future__ import annotations
 
-from typing import Any
 from dataclasses import asdict
+from typing import Any
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .utils import get_tempo_date, normalize_color, get_icon_color
 from .const import (
     COLORS,
     CONF_TEMPO_DAY_CHANGE_TIME,
     TEMPO_DAY_CHANGE_TIME,
 )
-
-from .forecast_coordinator import ForecastCoordinator
 from .devices import CHILD_FORECAST, child_device_info
+from .forecast_coordinator import ForecastCoordinator
+from .utils import get_icon_color, get_tempo_date, normalize_color
+
 
 class OpenDPEForecastSensor(CoordinatorEntity, SensorEntity):
     """OpenDPE forecast sensor."""

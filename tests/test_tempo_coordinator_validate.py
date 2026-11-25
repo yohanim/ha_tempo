@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-import pytest
+from tests.conftest import TODAY, TOMORROW
 
 from custom_components.tempo_rte_forecast.tempo_coordinator import TempoDataCoordinator
-from tests.conftest import TODAY, TOMORROW
 
 _DAY_CHANGE = "06:00:00"
 _PATCH_DATE = patch(

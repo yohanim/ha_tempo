@@ -6,14 +6,14 @@ from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant import loader
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt as dt_util
-from homeassistant import loader
-from pytest_homeassistant_custom_component.common import (
+from pytest_homeassistant.common import (
     MockConfigEntry,
     async_test_home_assistant,
 )
@@ -35,7 +35,6 @@ from custom_components.tempo_rte_forecast.issues import (
     async_track_api_outage,
 )
 from custom_components.tempo_rte_forecast.utils import invalid_offpeak_parts
-
 
 # ---------------------------------------------------------------------------
 # invalid_offpeak_parts
@@ -116,17 +115,25 @@ async def test_prices_base_contract_ignores_offpeak_format() -> None:
 
 
 @pytest.fixture
-async def issue_hass(hass: HomeAssistant) -> HomeAssistant:
-    await ir.async_load(hass)
-    return hass
+async def issue_hass(full_hass: HomeAssistant) -> HomeAssistant:
+    """Config entries + registries: issues are tied to a registered entry."""
+    return full_hass
 
 
 def _issue(hass: HomeAssistant, issue_id: str):
     return ir.async_get(hass).async_get_issue(DOMAIN, issue_id)
 
 
+def _entry(hass: HomeAssistant, options: dict | None = None) -> MockConfigEntry:
+    """Registered entry: issues are tied to it (``config_entry_id``)."""
+    entry = MockConfigEntry(domain=DOMAIN, options=options or {})
+    entry.add_to_hass(hass)
+    return entry
+
+
 async def test_api_outage_issue_after_threshold_and_cleared(issue_hass) -> None:
     hass = issue_hass
+    entry = _entry(hass)
     coordinator = MagicMock()
     coordinator.last_update_success = False
     listeners = []
@@ -134,7 +141,7 @@ async def test_api_outage_issue_after_threshold_and_cleared(issue_hass) -> None:
 
     start = dt_util.utcnow()
     with patch("custom_components.tempo_rte_forecast.issues.dt_util.utcnow", return_value=start):
-        async_track_api_outage(hass, coordinator, "rte", "RTE")
+        async_track_api_outage(hass, entry, coordinator, "rte", "RTE")
     assert _issue(hass, api_issue_id("rte")) is None
 
     # Still failing, but before the threshold: no issue.
@@ -154,6 +161,7 @@ async def test_api_outage_issue_after_threshold_and_cleared(issue_hass) -> None:
     assert issue is not None
     assert issue.translation_key == "api_unavailable"
     assert issue.translation_placeholders == {"api": "RTE", "hours": "24"}
+    assert issue.config_entry_id == entry.entry_id
 
     coordinator.last_update_success = True
     listeners[0]()
@@ -162,6 +170,7 @@ async def test_api_outage_issue_after_threshold_and_cleared(issue_hass) -> None:
 
 async def test_api_outage_clock_resets_after_success(issue_hass) -> None:
     hass = issue_hass
+    entry = _entry(hass)
     coordinator = MagicMock()
     coordinator.last_update_success = False
     listeners = []
@@ -170,7 +179,7 @@ async def test_api_outage_clock_resets_after_success(issue_hass) -> None:
     target = "custom_components.tempo_rte_forecast.issues.dt_util.utcnow"
 
     with patch(target, return_value=start):
-        async_track_api_outage(hass, coordinator, "opendpe", "Open DPE")
+        async_track_api_outage(hass, entry, coordinator, "opendpe", "Open DPE")
     coordinator.last_update_success = True
     with patch(target, return_value=start + timedelta(hours=1)):
         listeners[0]()
@@ -190,8 +199,7 @@ async def test_api_outage_clock_resets_after_success(issue_hass) -> None:
     ],
 )
 async def test_offpeak_issue(issue_hass, options, expected_issue) -> None:
-    entry = MagicMock()
-    entry.options = options
+    entry = _entry(issue_hass, options)
 
     async_check_offpeak_ranges(issue_hass, entry)
 
@@ -199,15 +207,20 @@ async def test_offpeak_issue(issue_hass, options, expected_issue) -> None:
     assert (issue is not None) is expected_issue
     if expected_issue:
         assert issue.translation_placeholders == {"ranges": "22h-6h"}
+        assert issue.config_entry_id == entry.entry_id
 
 
 async def test_offpeak_issue_cleared_once_fixed(issue_hass) -> None:
-    entry = MagicMock()
-    entry.options = {CONF_CONTRACT: CONTRACT_TEMPO, CONF_OFFPEAK_RANGES: "bad"}
+    entry = _entry(
+        issue_hass, {CONF_CONTRACT: CONTRACT_TEMPO, CONF_OFFPEAK_RANGES: "bad"}
+    )
     async_check_offpeak_ranges(issue_hass, entry)
     assert _issue(issue_hass, ISSUE_INVALID_OFFPEAK) is not None
 
-    entry.options = {CONF_CONTRACT: CONTRACT_TEMPO, CONF_OFFPEAK_RANGES: "22:00-06:00"}
+    issue_hass.config_entries.async_update_entry(
+        entry,
+        options={CONF_CONTRACT: CONTRACT_TEMPO, CONF_OFFPEAK_RANGES: "22:00-06:00"},
+    )
     async_check_offpeak_ranges(issue_hass, entry)
     assert _issue(issue_hass, ISSUE_INVALID_OFFPEAK) is None
 

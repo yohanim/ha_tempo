@@ -1,0 +1,8 @@
+# Same settings as ha_daikin_local (pyproject.toml [tool.ruff]); default rule set.
+target-version = "py314"
+src = ["custom_components", "tests"]
+
+[lint.isort]
+# The integration is first-party: its imports come after homeassistant's, which
+# must be imported first (it installs its httpx and voluptuous replacements).
+known-first-party = ["custom_components"]

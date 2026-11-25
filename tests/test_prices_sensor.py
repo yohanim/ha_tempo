@@ -11,7 +11,10 @@ from custom_components.tempo_rte_forecast.const import (
     CONTRACT_HEURES_CREUSES,
     CONTRACT_TEMPO,
 )
-from custom_components.tempo_rte_forecast.prices_sensor import PriceSensor, SpecificPriceSensor
+from custom_components.tempo_rte_forecast.prices_sensor import (
+    PriceSensor,
+    SpecificPriceSensor,
+)
 
 _TEMPO_PRICES = {
     "blue": {"HP": 0.1749, "HC": 0.1486},

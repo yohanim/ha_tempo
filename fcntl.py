@@ -1,6 +1,6 @@
 # Windows stub for the Unix-only fcntl module.
 # Required because homeassistant.runner imports fcntl at module level;
-# pytest-homeassistant-custom-component loads runner during plugin init.
+# pytest-homeassistant (pytest_homeassistant.common) loads runner on import.
 # None of the fcntl calls are exercised in our test suite.
 
 F_GETFD = 1
@@ -18,7 +18,7 @@ LOCK_NB = 4
 LOCK_UN = 8
 
 
-def fcntl(fd, cmd, arg=0):  # noqa: F811
+def fcntl(fd, cmd, arg=0):
     return 0
 
 

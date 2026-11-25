@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import io
 from datetime import date, datetime
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
-from unittest.mock import AsyncMock, MagicMock
-
+import aiohttp
 import pytest
+from tests.conftest import TODAY, make_await_response
 
 from custom_components.tempo_rte_forecast.const import (
     CONTRACT_BASE,
@@ -19,7 +19,6 @@ from custom_components.tempo_rte_forecast.const import (
 )
 from custom_components.tempo_rte_forecast.prices_coordinator import PriceCoordinator
 from custom_components.tempo_rte_forecast.tempo_coordinator import TempoDataCoordinator
-from tests.conftest import TODAY, make_await_response
 
 PARIS = ZoneInfo("Europe/Paris")
 
@@ -145,6 +144,45 @@ async def test_update_prices_persists_with_delayed_save(hass, mock_config_entry)
     assert stored["contract"] == CONTRACT_TEMPO
     assert stored["prices"][CONTRACT_TEMPO]["blue"] == new_grid["blue"]
     assert stored["last_update"] is not None
+
+
+@pytest.mark.parametrize(
+    ("error", "log_fragment"),
+    [
+        # Expected download failure: one warning, previous prices kept.
+        (
+            aiohttp.ClientResponseError(MagicMock(), (), status=503),
+            "Failed to update Tempo prices",
+        ),
+        (ValueError("bad CSV"), "Failed to update Tempo prices"),
+        # A bug: still never raised out of the (background) update, but logged
+        # with its traceback.
+        (AttributeError("bug"), "Unexpected error during price update"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_prices_failure_keeps_previous_prices(
+    hass, mock_config_entry, caplog, error: Exception, log_fragment: str
+) -> None:
+    tempo = TempoDataCoordinator(hass, mock_config_entry)
+    coordinator = PriceCoordinator(hass, mock_config_entry, tempo)
+    coordinator._contract = CONTRACT_TEMPO
+    previous = {CONTRACT_TEMPO: {"blue": {"HP": 0.1749, "HC": 0.1486}}}
+    coordinator._prices = previous
+    coordinator._store = MagicMock()
+
+    try:
+        with patch.object(
+            coordinator, "_fetch_and_parse_csv", AsyncMock(side_effect=error)
+        ):
+            await coordinator._update_prices(force=True)
+    finally:
+        await coordinator.async_shutdown()
+        await tempo.async_shutdown()
+
+    assert coordinator._prices == previous
+    coordinator._store.async_delay_save.assert_not_called()
+    assert log_fragment in caplog.text
 
 
 @pytest.mark.asyncio

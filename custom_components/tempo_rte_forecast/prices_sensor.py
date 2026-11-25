@@ -7,10 +7,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CURRENCY_EURO
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import COLORS, CONTRACT_TEMPO, CONTRACT_BASE
-from .prices_coordinator import PriceCoordinator
+from .const import CONTRACT_BASE, CONTRACT_TEMPO
 from .devices import CHILD_PRICES, child_device_info
-from .utils import get_icon_color, normalize_color, localized_color_label
+from .prices_coordinator import PriceCoordinator
+from .utils import get_icon_color, localized_color_label, normalize_color
+
 
 class PriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
     """Sensor for the current electricity price."""
@@ -141,9 +142,7 @@ class SpecificPriceSensor(CoordinatorEntity[PriceCoordinator], SensorEntity):
                 attributes["active"] = True
         else:
             # Base or HC
-            if contract == CONTRACT_BASE:
-                attributes["active"] = True
-            elif current_period == self._key:
+            if contract == CONTRACT_BASE or current_period == self._key:
                 attributes["active"] = True
                 
         return attributes

@@ -4,27 +4,23 @@ Copyright (C) 2025 Christophe Bansart
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 import voluptuous as vol
-
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import entity_registry as er
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 
-from .const import (
-    DOMAIN
-)
+from .const import DOMAIN
 from .devices import async_register_main_device
 from .forecast_coordinator import ForecastCoordinator
 from .issues import (
     async_check_offpeak_ranges,
-    async_delete_all_issues,
     async_delete_api_issues,
     async_track_api_outage,
 )
@@ -45,26 +41,19 @@ async def _async_ensure_refresh_service(hass: HomeAssistant) -> None:
         return
 
     async def async_handle_refresh(_call: ServiceCall) -> None:
+        # None of these raise: DataUpdateCoordinator.async_refresh records and
+        # logs update errors itself, and the price grid fetch keeps the previous
+        # prices (logging why) when data.gouv.fr fails.
         for ent in hass.config_entries.async_entries(DOMAIN):
             if ent.state != ConfigEntryState.LOADED:
                 continue
             runtime = ent.runtime_data
             if runtime is None:
                 continue
-            title = ent.title
-            try:
-                await runtime.forecast_coordinator.async_refresh()
-            except Exception as err:
-                _LOGGER.warning("%s: manual forecast refresh failed: %s", title, err)
-            try:
-                await runtime.tempo_coordinator.async_refresh()
-            except Exception as err:
-                _LOGGER.warning("%s: manual Tempo refresh failed: %s", title, err)
-            try:
-                await runtime.price_coordinator.async_force_prices_update()
-                await runtime.price_coordinator.async_refresh()
-            except Exception as err:
-                _LOGGER.warning("%s: manual price refresh failed: %s", title, err)
+            await runtime.forecast_coordinator.async_refresh()
+            await runtime.tempo_coordinator.async_refresh()
+            await runtime.price_coordinator.async_force_prices_update()
+            await runtime.price_coordinator.async_refresh()
 
     hass.services.async_register(
         DOMAIN,
@@ -89,14 +78,13 @@ def _remove_refresh_service_if_last(hass: HomeAssistant, unloaded_entry_id: str)
     hass.data.get(DOMAIN, {}).pop(DATA_REFRESH_SERVICE_REGISTERED, None)
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Migrate config entry to the current version."""
     if entry.version < 2:
         _LOGGER.info("Migrating config entry from version %s to 2", entry.version)
         await _async_migrate_unique_ids(hass, entry)
         hass.config_entries.async_update_entry(entry, version=2)
         _LOGGER.info("Migration to version 2 complete")
-    return True
 
 
 @dataclass
@@ -112,15 +100,17 @@ class TempoRuntimeData:
 type TempoConfigEntry = ConfigEntry[TempoRuntimeData]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> None:
     """Setup integration from a config entry."""
     # Cleanup old ghost devices (idempotent, no-op once the device is gone)
     await _async_cleanup_devices(hass, entry)
 
     tempo_coordinator = TempoDataCoordinator(hass, entry)
+    # A corrupt or unreadable cache file (Store raises HomeAssistantError) must
+    # not block setup: the APIs refill it.
     try:
         await tempo_coordinator.async_load_cache()
-    except Exception as err:
+    except HomeAssistantError as err:
         _LOGGER.warning("Failed to restore cached Tempo colors: %s", err)
     forecast_coordinator = ForecastCoordinator(hass, entry)
 
@@ -144,7 +134,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> boo
     price_coordinator = PriceCoordinator(hass, entry, tempo_coordinator)
     try:
         await price_coordinator.async_load_cache()
-    except Exception as err:
+    except HomeAssistantError as err:
         _LOGGER.warning("Failed to restore cached prices: %s", err)
     # Cache is restored; safe to kick off the background fetch now, no race.
     price_coordinator.async_schedule_initial_fetch()
@@ -168,16 +158,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> boo
     # Repair issues: long API outages (hidden by cached values) and invalid
     # off-peak ranges saved by older versions.
     entry.async_on_unload(
-        async_track_api_outage(hass, tempo_coordinator, "rte", "RTE")
+        async_track_api_outage(hass, entry, tempo_coordinator, "rte", "RTE")
     )
     entry.async_on_unload(
-        async_track_api_outage(hass, forecast_coordinator, "opendpe", "Open DPE")
+        async_track_api_outage(
+            hass, entry, forecast_coordinator, "opendpe", "Open DPE"
+        )
     )
     async_check_offpeak_ranges(hass, entry)
 
     await _async_ensure_refresh_service(hass)
-
-    return True
 
 async def _async_migrate_unique_ids(hass: HomeAssistant, entry: ConfigEntry):
     """Migrate old unique IDs to new entry_id based ones."""
@@ -201,13 +191,20 @@ async def _async_migrate_unique_ids(hass: HomeAssistant, entry: ConfigEntry):
         elif old_unique_id == f"{DOMAIN}_current_price":
             new_unique_id = f"{entry_id}_current_price"
             
-        elif old_unique_id.startswith(f"{DOMAIN}_tempo_") or old_unique_id.startswith(f"{DOMAIN}_base_") or old_unique_id.startswith(f"{DOMAIN}_heures_creuses_"):
+        elif old_unique_id.startswith(
+            (f"{DOMAIN}_tempo_", f"{DOMAIN}_base_", f"{DOMAIN}_heures_creuses_")
+        ):
             suffix = old_unique_id.replace(f"{DOMAIN}_", "")
             new_unique_id = f"{entry_id}_{suffix}"
 
-        if new_unique_id and new_unique_id != old_unique_id:
-            if not ent_reg.async_get_entity_id(entity.domain, entity.platform, new_unique_id):
-                ent_reg.async_update_entity(entity.entity_id, new_unique_id=new_unique_id)
+        if (
+            new_unique_id
+            and new_unique_id != old_unique_id
+            and not ent_reg.async_get_entity_id(
+                entity.domain, entity.platform, new_unique_id
+            )
+        ):
+            ent_reg.async_update_entity(entity.entity_id, new_unique_id=new_unique_id)
 
 async def _async_cleanup_devices(hass: HomeAssistant, entry: ConfigEntry):
     """Remove old devices that have no entities.
@@ -221,26 +218,26 @@ async def _async_cleanup_devices(hass: HomeAssistant, entry: ConfigEntry):
     ent_reg = er.async_get(hass)
 
     for device in dr.async_entries_for_config_entry(dev_reg, entry.entry_id):
-        if (DOMAIN, "forecast") in device.identifiers:
-            if not er.async_entries_for_device(ent_reg, device.id):
-                dev_reg.async_remove_device(device.id)
+        if (DOMAIN, "forecast") in device.identifiers and not er.async_entries_for_device(
+            ent_reg, device.id
+        ):
+            dev_reg.async_remove_device(device.id)
 
-async def async_unload_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> bool:
-    """Unload integration."""
-    entry_id = entry.entry_id
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok and hasattr(entry, "runtime_data"):
+async def async_unload_entry(hass: HomeAssistant, entry: TempoConfigEntry) -> None:
+    """Unload integration (raises ConfigEntryError if a platform fails to unload)."""
+    await hass.config_entries.async_unload_platforms_or_raise(entry, PLATFORMS)
+    if hasattr(entry, "runtime_data"):
         await entry.runtime_data.tempo_coordinator.async_shutdown()
         await entry.runtime_data.forecast_coordinator.async_shutdown()
         await entry.runtime_data.price_coordinator.async_shutdown()
-    if unload_ok:
-        _remove_refresh_service_if_last(hass, entry_id)
-        async_delete_api_issues(hass)
-    return unload_ok
+    _remove_refresh_service_if_last(hass, entry.entry_id)
+    async_delete_api_issues(hass)
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Delete this entry's cached data stores from disk."""
+    """Delete this entry's cached data stores from disk.
+
+    Repair issues are tied to the entry: Home Assistant deletes them with it.
+    """
     await Store(hass, 1, f"{DOMAIN}_{entry.entry_id}_prices_cache").async_remove()
     await Store(hass, 1, f"{DOMAIN}_{entry.entry_id}_tempo_cache").async_remove()
-    async_delete_all_issues(hass)

@@ -10,7 +10,6 @@ from homeassistant.const import Platform
 from custom_components.tempo_rte_forecast import PLATFORMS, async_migrate_entry
 from custom_components.tempo_rte_forecast.const import DOMAIN
 
-
 # ---------------------------------------------------------------------------
 # PLATFORMS
 # ---------------------------------------------------------------------------
@@ -66,8 +65,8 @@ def _run_migration(entities: list, entry_id: str = "abc123") -> tuple[MagicMock,
 
 
 @pytest.mark.asyncio
-async def test_migrate_entry_returns_true_for_v1() -> None:
-    """Function must return True so HA considers the migration successful."""
+async def test_migrate_entry_returns_none_for_v1() -> None:
+    """Success is returning None (HA 2026.11 convention; failures raise)."""
     hass = MagicMock()
     entry = MagicMock()
     entry.version = 1
@@ -82,12 +81,12 @@ async def test_migrate_entry_returns_true_for_v1() -> None:
     ):
         result = await async_migrate_entry(hass, entry)
 
-    assert result is True
+    assert result is None
 
 
 @pytest.mark.asyncio
-async def test_migrate_entry_returns_true_for_v2() -> None:
-    """v2 entries must also return True without touching the registry."""
+async def test_migrate_entry_returns_none_for_v2() -> None:
+    """v2 entries must also succeed without touching the registry."""
     hass = MagicMock()
     entry = MagicMock()
     entry.version = 2
@@ -95,7 +94,7 @@ async def test_migrate_entry_returns_true_for_v2() -> None:
     with patch("custom_components.tempo_rte_forecast.er.async_get") as mock_er_get:
         result = await async_migrate_entry(hass, entry)
 
-    assert result is True
+    assert result is None
     mock_er_get.assert_not_called()
 
 

@@ -2,18 +2,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 from .const import (
     COLORS,
-    )
+)
+
 
 #   Forecast model Light (JSON from Open DPE)
 class ForecastDayLight(TypedDict, total=False):
     """Tempo forecast for a given day."""
     date: str
     couleur: str                                        # "bleu", "blanc", "rouge" (normalized to lowercase)
-    probability: Optional[float]                        # 0.67 for example (for 67%)
+    probability: float | None                        # 0.67 for example (for 67%)
 
 #   Forecast model Light (JSON from Open DPE)
 class ForecastDay(TypedDict, total=False):
@@ -25,10 +26,10 @@ class ForecastDay(TypedDict, total=False):
     stock_blanc: int
     stock_rouge: int
     tempo_color: str                                    # "bleu", "blanc", "rouge" (normalized to lowercase)
-    probability: Optional[float]                        # 0.67 for example (for 67%)
-    probability_bleu: Optional[float]
-    probability_blanc: Optional[float]
-    probability_rouge: Optional[float]
+    probability: float | None                        # 0.67 for example (for 67%)
+    probability_bleu: float | None
+    probability_blanc: float | None
+    probability_rouge: float | None
     # source: str = "open_dpe"
 
 @dataclass
@@ -39,7 +40,7 @@ class ForecastSensor:
     short_date: str                                     # minimized localized date
     day: str                                            # minimized localized day of week
     color: str                                          # "bleu", "blanc", "rouge" (normalized to lowercase)
-    probability: Optional[float | str]                  # 0.67 for example (for 67%)
+    probability: float | str | None                  # 0.67 for example (for 67%)
     source: str = "open_dpe"
 
 

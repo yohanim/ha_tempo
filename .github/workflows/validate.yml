@@ -36,8 +36,38 @@ jobs:
         with:
           category: integration
 
-  validate-tests:
+  lint:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Run Ruff
+        run: ruff check .
+
+  # Full Home Assistant harness (pytest-homeassistant), twice. Versions come
+  # from the repository metadata (scripts/test_requirements.py), never repeated:
+  # - minimum: Core at the hacs.json floor, manifest.json requirements at their
+  #   minimum
+  # - latest: newest harness + Core + requirements (catches upstream breakage
+  #   early; the daily schedule above re-runs it even without pushes)
+  validate-tests:
+    name: validate-tests (${{ matrix.versions }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        versions: [minimum, latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -50,7 +80,10 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements_test.txt
+          python scripts/test_requirements.py ${{ matrix.versions }} > "$RUNNER_TEMP/requirements_versions.txt"
+          cat "$RUNNER_TEMP/requirements_versions.txt"
+          pip install -U -r requirements_test.txt -r "$RUNNER_TEMP/requirements_versions.txt"
+          pip show homeassistant pytest-homeassistant | grep -E "^(Name|Version)"
 
       - name: Run pytest
         run: python -m pytest -v

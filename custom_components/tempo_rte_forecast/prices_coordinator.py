@@ -1,43 +1,54 @@
 from __future__ import annotations
 
 import asyncio
+import copy
+import csv
+import io
 import logging
 from datetime import date, datetime, timedelta
-import io
-import csv
-import copy
 from typing import Any
 
-from homeassistant.core import HomeAssistant, callback
+import aiohttp
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
-    DOMAIN,
-    TEMPO_TIMEZONE,
     CONF_CONTRACT,
+    CONF_OFFPEAK_RANGES,
+    CONF_PRICE_UPDATE_INTERVAL,
+    CONF_SUBSCRIBED_POWER,
     CONTRACT_BASE,
     CONTRACT_HEURES_CREUSES,
     CONTRACT_TEMPO,
     DEFAULT_CONTRACT,
-    CONF_OFFPEAK_RANGES,
     DEFAULT_OFFPEAK_RANGES,
-    CONF_SUBSCRIBED_POWER,
-    DEFAULT_SUBSCRIBED_POWER,
-    CONF_PRICE_UPDATE_INTERVAL,
     DEFAULT_PRICE_UPDATE_INTERVAL,
+    DEFAULT_SUBSCRIBED_POWER,
+    DOMAIN,
     PRICE_BASE_URL,
     PRICE_HPHC_URL,
     PRICE_TEMPO_URL,
     STORE_SAVE_DELAY,
+    TEMPO_TIMEZONE,
 )
-from .utils import parse_offpeak_ranges, is_offpeak, normalize_contract
 from .tempo_coordinator import TempoDataCoordinator
-from .utils import get_tempo_date
+from .utils import get_tempo_date, is_offpeak, normalize_contract, parse_offpeak_ranges
+
+# Expected failures of one price grid download: network/HTTP errors, timeout,
+# and a CSV that does not have the expected layout. Anything else is a bug and
+# reaches the logged safety net in _update_prices.
+PRICE_FETCH_ERRORS = (
+    aiohttp.ClientError,
+    TimeoutError,
+    csv.Error,
+    KeyError,
+    ValueError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -208,7 +219,7 @@ class PriceCoordinator(DataUpdateCoordinator):
                     if base_prices:
                         new_prices[CONTRACT_BASE] = base_prices
                         has_updated = True
-                except Exception as e:
+                except PRICE_FETCH_ERRORS as e:
                     _LOGGER.warning("Failed to update Base prices: %s", e)
 
             elif self._contract == CONTRACT_HEURES_CREUSES:
@@ -217,7 +228,7 @@ class PriceCoordinator(DataUpdateCoordinator):
                     if hphc_prices:
                         new_prices[CONTRACT_HEURES_CREUSES] = hphc_prices
                         has_updated = True
-                except Exception as e:
+                except PRICE_FETCH_ERRORS as e:
                     _LOGGER.warning("Failed to update HP/HC prices: %s", e)
 
             elif self._contract == CONTRACT_TEMPO:
@@ -228,9 +239,9 @@ class PriceCoordinator(DataUpdateCoordinator):
                             new_prices[CONTRACT_TEMPO] = {}
                         new_prices[CONTRACT_TEMPO].update(tempo_prices)
                         has_updated = True
-                except Exception as e:
+                except PRICE_FETCH_ERRORS as e:
                     _LOGGER.warning("Failed to update Tempo prices: %s", e)
-            
+
             if not has_updated:
                 _LOGGER.warning("Failed to update prices for %s. Keeping previous prices.", self._contract)
             else:
@@ -240,8 +251,10 @@ class PriceCoordinator(DataUpdateCoordinator):
                 self._store.async_delay_save(self._data_to_store, STORE_SAVE_DELAY)
                 await self.async_refresh()
 
-        except Exception as e:
-            _LOGGER.error("Unexpected error during price update: %s. Keeping previous prices.", e, exc_info=True)
+        except Exception:
+            # Safety net (also runs as a background task): keep the previous
+            # prices whatever went wrong, with the traceback for a bug report.
+            _LOGGER.exception("Unexpected error during price update. Keeping previous prices.")
 
     def _data_to_store(self) -> dict[str, Any]:
         """Price grid snapshot persisted by the Store."""
@@ -261,8 +274,7 @@ class PriceCoordinator(DataUpdateCoordinator):
         # Tentative de décodage UTF-8 (avec gestion du BOM), sinon repli sur Latin-1
         try:
             content = content_bytes.decode('utf-8')
-            if content.startswith('\ufeff'):
-                content = content[1:]
+            content = content.removeprefix('\ufeff')
         except UnicodeDecodeError:
             content = content_bytes.decode('latin-1')
 
@@ -308,10 +320,7 @@ class PriceCoordinator(DataUpdateCoordinator):
         if start_date > target_date:
             return False
         
-        if end_date and end_date < target_date:
-            return False
-            
-        return True
+        return not (end_date and end_date < target_date)
 
     def _parse_base_prices(self, csv_file: io.StringIO) -> dict:
         """Parse Base price CSV."""
@@ -424,7 +433,7 @@ class PriceCoordinator(DataUpdateCoordinator):
         trigger_times.add(self.tempo_coordinator.tempo_day_change_time)
         
         current_time = now.time()
-        sorted_triggers = sorted(list(trigger_times))
+        sorted_triggers = sorted(trigger_times)
         
         for t in sorted_triggers:
             if t > current_time:

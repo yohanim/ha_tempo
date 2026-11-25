@@ -219,9 +219,11 @@ class TestHandleCoordinatorUpdate:
         sensor = _make_sensor(0, rte_data={TODAY: "red"})
         sensor.async_write_ha_state = MagicMock()
         sensor._last_state = "blue"
-        with patch(_PATCH_DATE, return_value=TODAY):
-            with caplog.at_level(logging.INFO, logger="custom_components.tempo_rte_forecast.tempo_sensor"):
-                sensor._handle_coordinator_update()
+        with (
+            patch(_PATCH_DATE, return_value=TODAY),
+            caplog.at_level(logging.INFO, logger="custom_components.tempo_rte_forecast.tempo_sensor"),
+        ):
+            sensor._handle_coordinator_update()
         assert "State change" in caplog.text
         assert "blue" in caplog.text
         assert "red" in caplog.text
@@ -230,18 +232,22 @@ class TestHandleCoordinatorUpdate:
         sensor = _make_sensor(0, rte_data={TODAY: "blue"})
         sensor.async_write_ha_state = MagicMock()
         sensor._last_state = "blue"
-        with patch(_PATCH_DATE, return_value=TODAY):
-            with caplog.at_level(logging.INFO, logger="custom_components.tempo_rte_forecast.tempo_sensor"):
-                sensor._handle_coordinator_update()
+        with (
+            patch(_PATCH_DATE, return_value=TODAY),
+            caplog.at_level(logging.INFO, logger="custom_components.tempo_rte_forecast.tempo_sensor"),
+        ):
+            sensor._handle_coordinator_update()
         assert "State change" not in caplog.text
 
     def test_no_log_on_first_call_when_last_state_is_none(self, caplog) -> None:
         sensor = _make_sensor(0, rte_data={TODAY: "blue"})
         sensor.async_write_ha_state = MagicMock()
         sensor._last_state = None  # first call
-        with patch(_PATCH_DATE, return_value=TODAY):
-            with caplog.at_level(logging.INFO, logger="custom_components.tempo_rte_forecast.tempo_sensor"):
-                sensor._handle_coordinator_update()
+        with (
+            patch(_PATCH_DATE, return_value=TODAY),
+            caplog.at_level(logging.INFO, logger="custom_components.tempo_rte_forecast.tempo_sensor"),
+        ):
+            sensor._handle_coordinator_update()
         assert "State change" not in caplog.text
 
 

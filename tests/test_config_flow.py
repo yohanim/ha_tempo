@@ -12,7 +12,6 @@ from custom_components.tempo_rte_forecast.config_flow import (
     TempoConfigFlow,
 )
 
-
 # ---------------------------------------------------------------------------
 # Version constants
 # ---------------------------------------------------------------------------
@@ -53,6 +52,7 @@ async def test_step_reconfigure_no_input_shows_form() -> None:
     flow.async_show_form.assert_called_once()
     call_kwargs = flow.async_show_form.call_args
     assert call_kwargs.kwargs["step_id"] == "reconfigure"
+    assert result == flow.async_show_form.return_value
 
 
 @pytest.mark.asyncio
@@ -93,26 +93,12 @@ async def test_step_reconfigure_empty_data_schema() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Off-peak ranges field visibility (HA 2026.11 conditional fields)
+# Off-peak ranges field visibility (conditional fields, HA 2026.11+)
 # ---------------------------------------------------------------------------
 
 
-def test_offpeak_marker_falls_back_without_visible_support(monkeypatch) -> None:
-    """On HA < 2026.11 the field is a plain vol.Optional, always shown."""
-    import voluptuous as vol
-
-    from custom_components.tempo_rte_forecast import config_flow
-    from custom_components.tempo_rte_forecast.const import CONF_OFFPEAK_RANGES
-
-    monkeypatch.setattr(config_flow, "_FlowOptional", None)
-    marker = config_flow._offpeak_ranges_marker()
-    assert type(marker) is vol.Optional
-    assert marker.schema == CONF_OFFPEAK_RANGES
-    assert getattr(marker, "visible", None) is None
-
-
-def test_offpeak_marker_hidden_for_base_contract(monkeypatch) -> None:
-    """On HA 2026.11+ the field is only visible for HC and Tempo contracts."""
+def test_offpeak_marker_hidden_for_base_contract() -> None:
+    """The field is only visible for HC and Tempo contracts."""
     from custom_components.tempo_rte_forecast import config_flow
     from custom_components.tempo_rte_forecast.const import (
         CONF_CONTRACT,
@@ -121,12 +107,6 @@ def test_offpeak_marker_hidden_for_base_contract(monkeypatch) -> None:
         CONTRACT_TEMPO,
     )
 
-    class _FakeFlowOptional:
-        def __init__(self, key, *, visible=None):
-            self.schema = key
-            self.visible = visible
-
-    monkeypatch.setattr(config_flow, "_FlowOptional", _FakeFlowOptional)
     marker = config_flow._offpeak_ranges_marker()
     assert marker.schema == CONF_OFFPEAK_RANGES
     assert marker.visible == {

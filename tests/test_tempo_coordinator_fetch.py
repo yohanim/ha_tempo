@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from homeassistant.helpers.update_coordinator import UpdateFailed
+from tests.conftest import TODAY, TOMORROW, make_ctx_response
 
 from custom_components.tempo_rte_forecast.const import (
     CONF_TEMPO_RETRY_DELAY,
@@ -15,7 +16,6 @@ from custom_components.tempo_rte_forecast.const import (
     RTE_API_URL,
 )
 from custom_components.tempo_rte_forecast.tempo_coordinator import TempoDataCoordinator
-from tests.conftest import TODAY, TOMORROW, make_ctx_response
 
 
 def _url_dispatcher(**url_map):
